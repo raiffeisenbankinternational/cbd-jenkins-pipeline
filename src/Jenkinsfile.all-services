@@ -1,0 +1,32 @@
+import com.cloudbees.groovy.cps.NonCPS
+import hudson.model.Item
+import jenkins.model.Jenkins
+
+@NonCPS
+def static getItems() {
+    return Jenkins.getInstanceOrNull()
+            .getAllItems(Item.class)
+            .collect { v -> v.getFullName() }
+}
+
+
+node("aws-dev-worker") {
+    stage("Deploy all dev") {
+        Map items = [:];
+        getItems().each { name ->
+            echo("Analyzing : " + name)
+
+            if (name.startsWith("glms-service/")) {
+                items[name] = {
+                    build job: name,
+                            parameters: [[$class: 'BooleanParameterValue', name: 'DEPLOY_TO_PROD', value: env.DEPLOY_TO_PROD],
+                                         [$class: 'BooleanParameterValue', name: 'DEPLOY_ALL_DEV', value: env.DEPLOY_ALL_DEV],
+                                         [$class: 'StringParameterValue', name: 'DEPLOY_TO_FRIEND', value: env.DEPLOY_TO_FRIEND]]
+                }
+            }
+        }
+        parallel(items)
+
+    }
+}
+

@@ -1,0 +1,55 @@
+plugins {
+    id 'groovy'
+}
+
+group 'org.example'
+version '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+    maven {
+        url "https://repo.jenkins-ci.org/releases/"
+    }
+    maven {
+        url "https://repo.spring.io/plugins-release/"
+    }
+    maven {
+        url "https://repo.jenkins-ci.org/incrementals/"
+    }
+}
+
+dependencies {
+
+    compile 'org.codehaus.groovy:groovy-all:2.3.11'
+
+    compile group: 'org.jenkins-ci.main', name: 'jenkins-core', version: '2.250', ext: 'jar'
+    compile group: 'com.cloudbees', name: 'groovy-cps', version: '1.31'
+
+    compile group: 'org.jenkinsci.plugins', name: 'pipeline-model-definition', version: '1.7.1', ext: 'jar'
+
+
+    // Jenkins plugins
+    compile group: 'org.jenkins-ci.plugins', name: 'credentials', version: '2.1.13', ext: 'jar'
+    compile group: 'org.jenkins-ci.plugins', name: 'matrix-auth', version: '1.6', ext: 'jar'
+    compile group: 'org.jenkins-ci.plugins.workflow', name: 'workflow-cps', version: '2.39', ext: 'jar'
+    compile group: 'org.jenkins-ci.plugins.workflow', name: 'workflow-job', version: '2.39', ext: 'jar'
+    compile group: 'org.jenkins-ci.plugins.workflow', name: 'workflow-api', version: '2.40', ext: 'jar'
+
+
+}
+
+
+sourceSets {
+    main {
+        groovy {
+            srcDirs = ["vars", "scripts", "src"]
+        }
+    }
+
+    test {
+        groovy {
+            srcDirs = ['test']
+        }
+    }
+}
+

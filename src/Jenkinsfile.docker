@@ -1,0 +1,99 @@
+import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
+
+def jira
+def gerrit
+def repo
+
+String agentLabel = "aws-dev-worker"
+String deployTarget = "DEV"
+if (env.GERRIT_EVENT_TYPE &&
+        env.GERRIT_EVENT_TYPE == "comment-added" || env.DEPLOY_TO_PROD == "true") {
+    deployTarget = "PROD"
+    agentLabel = "aws-prod-worker"
+}
+
+node("master") {
+    stage('Init') {
+        checkout scm
+        jira = load "scripts/jira.groovy"
+        gerrit = load "scripts/gerrit.groovy"
+        repo = load "scripts/repo.groovy"
+        jenkins = load "scripts/jenkins.groovy"
+        jira.checkJira()
+        echo "Jira check succeed, checking submit status"
+        gerrit.checkSubmitStatus(deployTarget)
+    }
+}
+
+node(agentLabel) {
+    stage('Build') {
+        gerrit.doCheckout();
+        gerrit.init();
+        sh """#!/bin/bash
+          set -exu
+          env
+          
+          if [[ -f ./gen-ansible.sh ]]; then
+            ./gen-ansible.sh
+            if [ -n "\$(git status --porcelain)" ]; then
+              echo "Please regenerate ansible stuff and commit"
+              echo git status
+              exit 1
+            fi
+          fi
+          
+          for i in \$(ls *-Dockerfile.* | sort); do 
+            echo "Building \${i}"
+            docker build ${GLOBAL_PROPERTIES_DOCKER_BUILD_ARGS} \
+              --build-arg BUILD_ID=${BUILD_ID} \
+              -t "${env.DOCKER_URL}/${DOCKER_ORG}/\${i#*.}:b${BUILD_ID}" -f \${i} .
+          done
+
+          
+          for i in \$(ls test | sort); do 
+            echo "Testing \${i}"
+            cd test/\${i}
+
+            mkdir -p ansible
+            mkdir -p resources
+            mkdir -p test 
+            mkdir -p api
+            mkdir -p schema
+
+
+
+            docker build ${GLOBAL_PROPERTIES_DOCKER_BUILD_ARGS} --build-arg BUILD_ID=${BUILD_ID} \
+              --build-arg DEPLOY_TARGET=DEV \
+              -t "${env.DOCKER_URL}/${DOCKER_ORG}/\${i#*.}:b${BUILD_ID}" .
+            cd ../../
+          done
+        """
+    }
+    stage("Deploy") {
+        withCredentials([usernamePassword(credentialsId: 'docker-push-http', usernameVariable: 'USERNAME', passwordVariable: "PASSWORD")]) {
+            sh """
+                 for i in \$(ls *-Dockerfile.* | sort); do 
+                     echo "Pushing \${i}"
+                     echo $PASSWORD | docker login -u $USERNAME --password-stdin ${env.DOCKER_PUSH_URL}
+                     docker tag  \
+                       "${env.DOCKER_URL}/${DOCKER_ORG}/\${i#*.}:b${BUILD_ID}" \
+                       "${env.DOCKER_PUSH_URL}/${DOCKER_ORG}/\${i#*.}:b${BUILD_ID}"
+  
+                     docker push "${env.DOCKER_PUSH_URL}/${DOCKER_ORG}/\${i#*.}:b${BUILD_ID}"
+                 done
+                 """
+        }
+
+    }
+
+    stage("Release") {
+        if (deployTarget == "PROD") {
+            gerrit.submitChange()
+            jira.close()
+        } else {
+            Utils.markStageSkippedForConditional("Release")
+        }
+    }
+}
+
+

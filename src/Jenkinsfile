@@ -1,0 +1,229 @@
+import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
+
+
+def runTests(accountId, environmentNameUpper, deployTarget) {
+    ansiColor('xterm') {
+        sh """
+            export AWS_ACCOUNT_ID="${accountId}"
+            export ENVIRONMENT_NAME="${environmentNameUpper}"
+            export DEPLOY_TARGET="${deployTarget}"
+
+            export TargetAccountId="${accountId}"
+            export ServiceName="\${PROJECT_NAME}"
+            export EnvironmentNameUpper="${environmentNameUpper}"
+
+            export BUILD_DOCKER_IMAGE="${env.DOCKER_URL}/${DOCKER_ORG}/${JOB_BASE_NAME}:b${BUILD_ID}"
+            if [[ -f Dockerfile.runtime ]]; then
+               export BUILD_DOCKER_IMAGE="${env.DOCKER_URL}/${DOCKER_ORG}/${JOB_BASE_NAME}-runtime:b${BUILD_ID}"
+            fi
+ 
+            /dist/deploy.sh "glms-deploy-lib/run-all-tests" 
+           """
+    }
+}
+
+Boolean testJob = false
+String testTarget = ""
+
+String agentLabel = "aws-dev-worker"
+String deployTarget = "DEV"
+if (env.GERRIT_EVENT_TYPE &&
+        env.GERRIT_EVENT_TYPE == "comment-added" || env.DEPLOY_TO_PROD == "true") {
+    deployTarget = "PROD"
+    agentLabel = "aws-prod-worker"
+}
+
+def jira
+def gerrit
+def repo
+def jenkins
+
+node("master") {
+    stage('Init') {
+        checkout scm
+        jira = load "scripts/jira.groovy"
+        gerrit = load "scripts/gerrit.groovy"
+        repo = load "scripts/repo.groovy"
+        jenkins = load "scripts/jenkins.groovy"
+        jira.checkJira()
+        echo "Jira check succeed, checking submit status"
+        gerrit.checkSubmitStatus(deployTarget)
+    }
+}
+
+
+node(agentLabel) {
+
+    try {
+        stage('Build') {
+            gerrit.doCheckout()
+            gerrit.init();
+
+            withCredentials([usernamePassword(credentialsId: 'docker-push-http', usernameVariable: 'DOCKER_USERNAME', passwordVariable: "DOCKER_PASSWORD"),
+                             usernamePassword(credentialsId: 'gerrit-http', usernameVariable: 'GIT_USERNAME', passwordVariable: "GIT_PASSWORD")]) {
+                ansiColor('xterm') {
+                    sh """#!/bin/bash
+                set -ex
+                docker login --username "\${DOCKER_USERNAME}" --password "\${DOCKER_PASSWORD}" ${env.DOCKER_PUSH_URL}
+
+                docker build ${GLOBAL_PROPERTIES_DOCKER_BUILD_ARGS} \
+                     --secret id=gitcookie,src=/home/jenkins/.gitcookie \
+                     --build-arg DEPLOY_TARGET="${deployTarget}" \
+                     -t "${env.DOCKER_URL}/${DOCKER_ORG}/\${JOB_BASE_NAME}:b\${BUILD_ID}"  .
+
+                if [[ -f Dockerfile.runtime ]]; then
+                  echo "Building runtime image"
+                  docker build \${GLOBAL_PROPERTIES_DOCKER_BUILD_ARGS} \
+                     --secret id=gitcookie,src=/home/jenkins/.gitcookie \
+                    --build-arg BUILD_ID=\${BUILD_ID} \
+                    -t "${env.DOCKER_URL}/${DOCKER_ORG}/\${JOB_BASE_NAME}-runtime:b\${BUILD_ID}" -f Dockerfile.runtime .
+                fi
+
+
+                docker tag "${env.DOCKER_URL}/${DOCKER_ORG}/\${JOB_BASE_NAME}:b\${BUILD_ID}" \
+                  "${env.DOCKER_PUSH_URL}/${DOCKER_ORG}/\${JOB_BASE_NAME}:b\${BUILD_ID}"
+                  
+                docker push "${env.DOCKER_PUSH_URL}/${DOCKER_ORG}/\${JOB_BASE_NAME}:b\${BUILD_ID}"
+
+
+                if [[ -f Dockerfile.runtime ]]; then
+                   echo "Pushing runtime"
+                   docker tag  \
+                      "${env.DOCKER_URL}/${DOCKER_ORG}/\${JOB_BASE_NAME}-runtime:b\${BUILD_ID}" \
+                       ${env.DOCKER_PUSH_URL}/${DOCKER_ORG}/\${JOB_BASE_NAME}-runtime:b\${BUILD_ID}
+
+                  docker push "${env.DOCKER_PUSH_URL}/${DOCKER_ORG}/\${JOB_BASE_NAME}-runtime:b\${BUILD_ID}"
+                fi
+                """
+                }
+            }
+        }
+    }
+    catch (exc) {
+        gerrit.unlockPatchSet()
+
+        def sw = new StringWriter()
+        def pw = new PrintWriter(sw)
+        exc.printStackTrace(pw)
+        echo sw.toString()
+        pw.close()
+
+        echo 'INFO: Unlocked Patchset'
+        error 'Deployment Failed'
+    }
+    try {
+        String dockerImage = "${env.DOCKER_URL}/${DOCKER_ORG}/${env.JOB_BASE_NAME}:b${env.BUILD_ID}"
+        withDockerContainer(args: """--group-add 999
+                                     -v /home/jenkins/.gitconfig:/home/build/.gitconfig 
+                                     -v /home/jenkins/.gitcookie:/home/build/.gitcookie 
+                                     -v /var/run/docker.sock:/var/run/docker.sock""",
+                image: dockerImage) {
+            stage('Configure Deployment') {
+
+                sh 'mkdir -p /dist/release-libs'
+
+                repo.uploadLibs(deployTarget)
+                wrap([$class: 'BuildUser']) {
+                    Boolean deployed = false
+                    Boolean deployedToProd = false
+                    def testStageName = "Deploy to TEST"
+                    stage(testStageName) {
+                        if (deployTarget == "PROD" || env.GERRIT_TOPIC == "env/TEST01") {
+                            repo.deploy(env.GLOBAL_PROPERTIES_TEST_AWS_ACCOUNT, "TEST01", deployTarget)
+                            if (deployTarget == "PROD") {
+                                runTests(env.GLOBAL_PROPERTIES_TEST_AWS_ACCOUNT, "TEST01", deployTarget)
+                            }
+                            deployed = true
+                            deployedToProd = true
+                        } else {
+                            Utils.markStageSkippedForConditional(testStageName)
+                        }
+                    }
+
+                    def prodStageName = "Deploy to PROD"
+                    stage(prodStageName) {
+                        if (deployTarget == "PROD") {
+                            repo.deploy(env.GLOBAL_PROPERTIES_PROD_AWS_ACCOUNT, "PROD01", deployTarget)
+                            runTests(env.GLOBAL_PROPERTIES_PROD_AWS_ACCOUNT, "PROD01", deployTarget)
+
+                            gerrit.submitChange()
+                            jira.close()
+                            deployed = true
+                            deployedToProd = true
+                        } else {
+                            Utils.markStageSkippedForConditional(prodStageName)
+                        }
+                    }
+
+                    def devAccounts = jenkins.parseJson("${GLOBAL_PROPERTIES_AWS_ACCOUNTS}")
+
+                    print devAccounts
+                    String gerritTopic = env.GERRIT_TOPIC
+                    if (env.GERRIT_TOPIC && gerritTopic.split('/')[0] == "env") {
+                        testJob = true
+                        testTarget = gerritTopic.split('/')[1]
+                    }
+
+                    echo "Test job: " + testJob + " " + !testJob
+                    echo "Test target: " + testTarget
+
+                    String changeOwnerEmail = env.GERRIT_CHANGE_OWNER_EMAIL ? env.GERRIT_CHANGE_OWNER_EMAIL : "";
+                    echo "Change owner email: " + changeOwnerEmail
+
+                    devAccounts.accounts.each { account ->
+                        String accountOwner = account.owner
+                        String accountName = account.name
+                        String accountId = account.accountId
+                        String accountEnv = account.environmentName
+                        echo "Account name: " + accountName
+                        echo "Account owner: " + accountOwner
+                        echo "Account id: " + accountId
+                        String stageName = "Deploy to " + accountEnv + " " + accountName
+                        String AWS_ACCOUNT_ID
+                        String ENVIRONMENT_NAME
+
+                        echo "Bla: " + (changeOwnerEmail == account.owner)
+                        echo "Bla: " + (!testJob)
+                        echo "Bla: " + (changeOwnerEmail == account.owner && !testJob)
+                        stage(stageName) {
+                            if (env.DEPLOY_TO_FRIEND &&
+                                    account.name == env.DEPLOY_TO_FRIEND) {
+                                AWS_ACCOUNT_ID = account.accountId
+                                ENVIRONMENT_NAME = account.environmentName
+                            } else if (env.BUILD_USER_EMAIL &&
+                                    account.owner == env.BUILD_USER_EMAIL &&
+                                    env.DEPLOY_TO_FRIEND == "") {
+                                AWS_ACCOUNT_ID = account.accountId
+                                ENVIRONMENT_NAME = account.environmentName
+                            } else if (changeOwnerEmail == account.owner && !testJob) {
+                                AWS_ACCOUNT_ID = account.accountId
+                                ENVIRONMENT_NAME = account.environmentName
+                            } else if (env.DEPLOY_ALL_DEV == "true") {
+                                AWS_ACCOUNT_ID = account.accountId
+                                ENVIRONMENT_NAME = account.environmentName
+                            } else if (testJob && account.environmentName == testTarget) {
+                                AWS_ACCOUNT_ID = account.accountId
+                                ENVIRONMENT_NAME = account.environmentName
+                            }
+                            echo "Selected account: ${AWS_ACCOUNT_ID}"
+                            if (AWS_ACCOUNT_ID && !deployedToProd) {
+                                repo.deploy(AWS_ACCOUNT_ID, ENVIRONMENT_NAME, deployTarget)
+                                deployed = true
+                            } else {
+                                Utils.markStageSkippedForConditional(stageName)
+                            }
+                        }
+                    }
+                    if (!deployed) {
+                        sh(label: 'Was not deployed to any environment', script: "echo 'No environment found!' && exit 1")
+                    }
+                }
+            }
+        }
+    }
+    catch (Exception ex) {
+        gerrit.unlockPatchSet()
+        echo 'INFO: Unlocked Patchset'
+        error 'Deployment Failed: ' + ex.getMessage()
+    }
+}

@@ -1,0 +1,152 @@
+import com.cloudbees.groovy.cps.NonCPS
+import hudson.model.Item
+import hudson.model.Job
+import hudson.model.ParametersDefinitionProperty
+import jenkins.model.Jenkins
+
+@NonCPS
+def static getItems() {
+    return Jenkins.getInstanceOrNull()
+            .getAllItems(Item.class)
+            .collect { v -> v.getFullName() }
+}
+
+@NonCPS
+def static getGitUrl(String name) {
+    Job job = Jenkins.getInstanceOrNull().getItemByFullName(name, Job.class)
+    ParametersDefinitionProperty paramDefProp = (ParametersDefinitionProperty) job.getProperty(ParametersDefinitionProperty.class)
+
+    /* Scan for all parameter with an associated default values */
+    return paramDefProp.getParameterDefinitions()
+            .find { v -> v.getName() == "GIT_URL" }
+            .getDefaultParameterValue()
+            .getValue()
+            .toString()
+}
+
+def createSubTask(String name) {
+    withCredentials([usernamePassword(credentialsId: 'jira-http', passwordVariable: 'JIRA_PW', usernameVariable: 'JIRA_USER')]) {
+        key = sh(returnStdout: true, script: """
+        #!/bin/bash
+        set -xe
+        curl -v --fail -XPOST  "${GLOBAL_JIRA_URL}/rest/api/2/issue/"  \
+           -o /tmp/issue.json \
+           -u "${JIRA_USER}:${JIRA_PW}"  \
+           -H "Content-Type: application/json" \
+           --data '
+        {
+            "fields":
+            {
+                "project":
+                {
+                    "key": "GLMS"
+                },
+                "parent":
+                {
+                    "key": "${STORY_NUMBER}"
+                },
+                "summary": "Update ${name}",
+                "description": "Automatic update",
+                "issuetype":
+                {
+                    "id": "10003"
+                }
+            }
+        }'
+        cat /tmp/issue.json | jq -r '.key'
+        """).trim()
+
+        echo "Created issue: $key"
+
+        sh(
+                """
+        curl -v --fail -XPOST "${GLOBAL_JIRA_URL}/rest/api/2/issue/${key}/transitions?expand=transitions.fields"  \
+           -u "${JIRA_USER}:${JIRA_PW}"  \
+           -H "Content-Type: application/json" \
+           --data '
+        {
+          "transition": {
+            "id": "41"
+          }
+        }'
+        """)
+        return key;
+    }
+}
+
+node("aws-dev-worker") {
+    String buildId = env.DOCKER_IMAGE_BUILD
+    String jobPrefix = env.JOB_PREFIX
+    String dockerImage = "${env.DOCKER_URL}/glms/glms-base-img:b" + buildId
+    String runArgs = "--group-add 999 " +
+            "-v $SSH_AUTH_SOCK:/home/build/ssh-agent " +
+            "-v /home/jenkins/.gitconfig:/home/build/.gitconfig " + 
+            "-v /home/jenkins/.gitcookie:/home/build/.gitcookie " +
+            "--env SSH_AUTH_SOCK=/home/build/ssh-agent " +
+            "-v /var/run/docker.sock:/var/run/docker.sock"
+    withDockerContainer(args: runArgs,
+            image: dockerImage) {
+        stage('Build') {
+
+            getItems().each { name ->
+                echo("Analyzing : " + name)
+                if (name.startsWith(jobPrefix)) {
+                    dir('subDir') {
+                        echo("Found service")
+                        String gitUrl = getGitUrl(name)
+                        echo gitUrl
+                        checkout([$class                           : 'GitSCM',
+                                  branches                         : [[name: 'master']],
+                                  doGenerateSubmoduleConfigurations: false,
+                                  extensions                       : [],
+                                  submoduleCfg                     : [],
+                                  userRemoteConfigs                : [[credentialsId: 'jenkins',
+                                                                       url          : gitUrl]]]
+                        )
+                        sh("""
+                          #!/bin/bash
+                          set -e
+                          git config --global user.email "${env.GERRIT_USER}"
+                          git config --global user.name "${env.GERRIT_EMAIL}"
+
+                          git checkout origin/master
+                          git reset --hard origin/master
+                          scp -p -P 29418 jenkins@${env.GERRIT_URL}:hooks/commit-msg ".git/hooks/"
+                          sed -i 's/\\(FROM.*\\):b\\([0-9]*\\)/\\1:b'${buildId}'/g' Dockerfile
+                          
+                          echo "- src: ssh://git@${env.SECONDARY_REPO_URL}/ewp/ewp-deploy-lib.git" > ansible/deploy/requirements.yml
+                          echo "  scm: git" >> ansible/deploy/requirements.yml
+                          echo "- src: ssh://${env.GERRIT_URL}:29418/glms/glms-deploy-lib" >> ansible/deploy/requirements.yml
+                          echo "  scm: git" >> ansible/deploy/requirements.yml
+                          """)
+
+                        if (env.UPDATE_LIBS == "true") {
+                            sh("""
+                            if [[ -f deps.edn ]]; then
+                              sed -i 's/#:mvn{:/{:mvn\\//g' deps.edn
+                              clojure -Sdeps '{:deps {olical/depot {:mvn/version "2.0.1"}}}' -m depot.outdated.main --write
+                            fi
+                            """)
+                        }
+                        String gitStatus = sh(script: "git status --porcelain", returnStdout: true )
+                        echo "Git status ${gitStatus}"
+                        if (gitStatus != "") {
+                          String key = createSubTask(name)
+                          echo "Changes found!"
+                          sh( """
+                            if [ -n "\$(git status --porcelain)" ]; then
+                              echo "There are changes";
+                              git add --all
+                              git commit -m "[${key}] Updating ${name}"
+                              git push origin HEAD:refs/for/master${env.GERRIT_TOPIC} 
+                            else
+                              echo "No changes";
+                            fi
+                          """)
+                        }
+                   }
+                }
+            }
+        }
+    }
+}

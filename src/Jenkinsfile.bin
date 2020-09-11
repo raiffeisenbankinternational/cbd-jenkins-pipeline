@@ -1,0 +1,55 @@
+def jira
+def gerrit
+def repo
+
+
+String agentLabel = "aws-dev-worker"
+String deployTarget = "DEV"
+if (env.GERRIT_EVENT_TYPE &&
+        env.GERRIT_EVENT_TYPE == "comment-added" || env.DEPLOY_TO_PROD == "true") {
+    deployTarget = "PROD"
+    agentLabel = "aws-prod-worker"
+}
+
+node("master") {
+    stage('Init') {
+        checkout scm
+        jira = load "scripts/jira.groovy"
+        gerrit = load "scripts/gerrit.groovy"
+        repo = load "scripts/repo.groovy"
+        jenkins = load "scripts/jenkins.groovy"
+        jira.checkJira()
+        echo "Jira check succeed, checking submit status"
+        gerrit.checkSubmitStatus(deployTarget)
+    }
+}
+
+node(agentLabel) {
+   stage("Build") {
+       gerrit.doCheckout();
+       gerrit.init();
+       ansiColor('xterm') {
+           sh """
+              set -ex
+              docker build --pull ${GLOBAL_PROPERTIES_DOCKER_BUILD_ARGS} \
+                --build-arg APP_VERSION=1.0.b${BUILD_ID} \
+                -t "${env.DOCKER_URL}/${DOCKER_ORG}/${JOB_BASE_NAME}:b${BUILD_ID}" .
+              """
+       }
+   }
+    stage("Deploy") {
+        String dockerImageUrl = "${DOCKER_URL}/${DOCKER_ORG}/${JOB_BASE_NAME}:b${BUILD_ID}"
+        String dockerBuildArgs = """--group-add 999
+                                     -v /home/jenkins/.gitconfig:/home/build/.gitconfig 
+                                     -v /home/jenkins/.gitcookie:/home/build/.gitcookie 
+                                     -v /var/run/docker.sock:/var/run/docker.sock"""
+        withDockerContainer(args: dockerBuildArgs,
+                           image: dockerImageUrl) {
+            repo.uploadLibs(deployTarget)
+            if (deployTarget == "PROD") {
+              gerrit.submitChange()
+              jira.close()
+            }
+       }
+    }
+}
