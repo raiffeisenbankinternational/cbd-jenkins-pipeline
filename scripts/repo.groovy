@@ -1,7 +1,7 @@
 def upload(String file, String pomFile, String artifactId, String groupId, String version, String repo, String credentials) {
     withCredentials([usernamePassword(credentialsId: credentials, usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
         ansiColor('xterm') {
-            sh """
+            sh(label: "Upload file", script: """
                VERSION=${version}
                ARTIFACT_ID=${artifactId}
                GROUP_ID=${groupId}
@@ -21,14 +21,14 @@ def upload(String file, String pomFile, String artifactId, String groupId, Strin
                  -DpomFile=${pomFile} \
                  -Dartifacts.username=\${USERNAME} -Dartifacts.password=\${PASSWORD} \
                  -Durl=${repo}/
-            """
+            """)
         }
     }
 }
 
 def deploy(accountId, environmentNameUpper, deployTarget) {
     ansiColor('xterm') {
-        sh """
+        sh(label: "Deploy using container", script: """
             export AWS_ACCOUNT_ID="${accountId}"
             export ENVIRONMENT_NAME="${environmentNameUpper}"
             
@@ -44,7 +44,7 @@ def deploy(accountId, environmentNameUpper, deployTarget) {
             fi
 
             /dist/deploy.sh
-           """
+           """)
     }
 }
 
@@ -69,12 +69,12 @@ def uploadJar(String file, deployTarget) {
             credentials)
 }
 
-def uploadLibs(String deployTarget) {
+def uploadLibs(String deployTarget, Boolean required = true) {
     echo "Checking for libs to push"
     String fileList = sh(script: "ls   '/dist/release-libs'", returnStdout: true)
     String FILES_LIST = fileList.trim()
     echo "FILES_LIST : ${FILES_LIST}"
-    if (!FILES_LIST?.trim()) {
+    if (!FILES_LIST?.trim() && required) {
        sh(label: "No libs found to deploy!", script: "echo 'No libs found to deploy!!' && exit 1", returnStdout: true)
     }
     for (String file : FILES_LIST.split("\\r?\\n")) {

@@ -39,90 +39,81 @@ def repo
 def jenkins
 
 node("master") {
-    stage('Init') {
-        checkout scm
-        jira = load "scripts/jira.groovy"
-        gerrit = load "scripts/gerrit.groovy"
-        repo = load "scripts/repo.groovy"
-        jenkins = load "scripts/jenkins.groovy"
-        jira.checkJira()
-        echo "Jira check succeed, checking submit status"
-        gerrit.checkSubmitStatus(deployTarget)
-    }
+  stage('Init') {
+    checkout scm
+    jira = load "scripts/jira.groovy"
+    gerrit = load "scripts/gerrit.groovy"
+    repo = load "scripts/repo.groovy"
+    jenkins = load "scripts/jenkins.groovy"
+    jira.checkJira()
+    echo "Jira check succeed, checking submit status"
+    gerrit.checkSubmitStatus(deployTarget)
+  }
 }
 
 
 node(agentLabel) {
-
     try {
-        stage('Build') {
-            gerrit.doCheckout()
-            gerrit.init();
+      stage('Build') {
+        gerrit.doCheckout()
+        gerrit.init();
 
-            withCredentials([usernamePassword(credentialsId: 'docker-push-http', usernameVariable: 'DOCKER_USERNAME', passwordVariable: "DOCKER_PASSWORD"),
-                             usernamePassword(credentialsId: 'gerrit-http', usernameVariable: 'GIT_USERNAME', passwordVariable: "GIT_PASSWORD")]) {
-                ansiColor('xterm') {
-                    sh """#!/bin/bash
-                set -ex
-                docker login --username "\${DOCKER_USERNAME}" --password "\${DOCKER_PASSWORD}" ${env.DOCKER_PUSH_URL}
-
-                docker build ${GLOBAL_PROPERTIES_DOCKER_BUILD_ARGS} \
-                     --secret id=gitcookie,src=/home/jenkins/.gitcookie \
-                     --build-arg DEPLOY_TARGET="${deployTarget}" \
-                     -t "${env.DOCKER_URL}/${DOCKER_ORG}/\${JOB_BASE_NAME}:b\${BUILD_ID}"  .
-
-                if [[ -f Dockerfile.runtime ]]; then
-                  echo "Building runtime image"
-                  docker build \${GLOBAL_PROPERTIES_DOCKER_BUILD_ARGS} \
-                     --secret id=gitcookie,src=/home/jenkins/.gitcookie \
-                    --build-arg BUILD_ID=\${BUILD_ID} \
-                    -t "${env.DOCKER_URL}/${DOCKER_ORG}/\${JOB_BASE_NAME}-runtime:b\${BUILD_ID}" -f Dockerfile.runtime .
-                fi
-
-
+        withCredentials([usernamePassword(credentialsId: 'docker-push-http', usernameVariable: 'DOCKER_USERNAME', passwordVariable: "DOCKER_PASSWORD"),
+                         usernamePassword(credentialsId: 'gerrit-http', usernameVariable: 'GIT_USERNAME', passwordVariable: "GIT_PASSWORD")]) {
+          ansiColor('xterm') {
+            sh(label: "Build docker images", script: """#!/bin/bash
+              set -ex
+              docker login --username "\${DOCKER_USERNAME}" --password "\${DOCKER_PASSWORD}" ${env.DOCKER_PUSH_URL}
+               docker build ${GLOBAL_PROPERTIES_DOCKER_BUILD_ARGS} \
+                   --secret id=gitcookie,src=/home/jenkins/.gitcookie \
+                   --build-arg DEPLOY_TARGET="${deployTarget}" \
+                   -t "${env.DOCKER_URL}/${DOCKER_ORG}/\${JOB_BASE_NAME}:b\${BUILD_ID}"  .
+               if [[ -f Dockerfile.runtime ]]; then
+                echo "Building runtime image"
+                docker build \${GLOBAL_PROPERTIES_DOCKER_BUILD_ARGS} \
+                   --secret id=gitcookie,src=/home/jenkins/.gitcookie \
+                  --build-arg BUILD_ID=\${BUILD_ID} \
+                  -t "${env.DOCKER_URL}/${DOCKER_ORG}/\${JOB_BASE_NAME}-runtime:b\${BUILD_ID}" -f Dockerfile.runtime .
+              fi
                 docker tag "${env.DOCKER_URL}/${DOCKER_ORG}/\${JOB_BASE_NAME}:b\${BUILD_ID}" \
-                  "${env.DOCKER_PUSH_URL}/${DOCKER_ORG}/\${JOB_BASE_NAME}:b\${BUILD_ID}"
-                  
-                docker push "${env.DOCKER_PUSH_URL}/${DOCKER_ORG}/\${JOB_BASE_NAME}:b\${BUILD_ID}"
-
-
+                "${env.DOCKER_PUSH_URL}/${DOCKER_ORG}/\${JOB_BASE_NAME}:b\${BUILD_ID}"
+               docker push "${env.DOCKER_PUSH_URL}/${DOCKER_ORG}/\${JOB_BASE_NAME}:b\${BUILD_ID}"
                 if [[ -f Dockerfile.runtime ]]; then
-                   echo "Pushing runtime"
-                   docker tag  \
-                      "${env.DOCKER_URL}/${DOCKER_ORG}/\${JOB_BASE_NAME}-runtime:b\${BUILD_ID}" \
-                       ${env.DOCKER_PUSH_URL}/${DOCKER_ORG}/\${JOB_BASE_NAME}-runtime:b\${BUILD_ID}
-
-                  docker push "${env.DOCKER_PUSH_URL}/${DOCKER_ORG}/\${JOB_BASE_NAME}-runtime:b\${BUILD_ID}"
-                fi
-                """
-                }
-            }
-        }
+                 echo "Pushing runtime"
+                 docker tag  \
+                    "${env.DOCKER_URL}/${DOCKER_ORG}/\${JOB_BASE_NAME}-runtime:b\${BUILD_ID}" \
+                     ${env.DOCKER_PUSH_URL}/${DOCKER_ORG}/\${JOB_BASE_NAME}-runtime:b\${BUILD_ID}
+                 docker push "${env.DOCKER_PUSH_URL}/${DOCKER_ORG}/\${JOB_BASE_NAME}-runtime:b\${BUILD_ID}"
+              fi
+              """)
+             }
+          }
+       }
     }
     catch (exc) {
-        gerrit.unlockPatchSet()
+      gerrit.unlockPatchSet()
 
-        def sw = new StringWriter()
-        def pw = new PrintWriter(sw)
-        exc.printStackTrace(pw)
-        echo sw.toString()
-        pw.close()
+      def sw = new StringWriter()
+      def pw = new PrintWriter(sw)
+      exc.printStackTrace(pw)
+      echo sw.toString()
+      pw.close()
 
-        echo 'INFO: Unlocked Patchset'
-        error 'Deployment Failed'
+      echo 'INFO: Unlocked Patchset'
+      error 'Deployment Failed'
     }
     try {
-        String dockerImage = "${env.DOCKER_URL}/${DOCKER_ORG}/${env.JOB_BASE_NAME}:b${env.BUILD_ID}"
-        withDockerContainer(args: """--group-add 999
-                                     -v /home/jenkins/.gitconfig:/home/build/.gitconfig 
-                                     -v /home/jenkins/.gitcookie:/home/build/.gitcookie 
-                                     -v /var/run/docker.sock:/var/run/docker.sock""",
+      String dockerImage = "${env.DOCKER_URL}/${DOCKER_ORG}/${env.JOB_BASE_NAME}:b${env.BUILD_ID}"
+      withDockerContainer(args: """--group-add 999
+                                   -v /home/jenkins/.gitconfig:/home/build/.gitconfig
+                                   -v /home/jenkins/.gitcookie:/home/build/.gitcookie
+                                   -v /var/run/docker.sock:/var/run/docker.sock""",
                 image: dockerImage) {
             stage('Configure Deployment') {
 
                 sh 'mkdir -p /dist/release-libs'
 
-                repo.uploadLibs(deployTarget)
+                repo.uploadLibs(deployTarget, false)
                 wrap([$class: 'BuildUser']) {
                     Boolean deployed = false
                     Boolean deployedToProd = false
@@ -220,10 +211,10 @@ node(agentLabel) {
                 }
             }
         }
-    }
-    catch (Exception ex) {
-        gerrit.unlockPatchSet()
-        echo 'INFO: Unlocked Patchset'
-        error 'Deployment Failed: ' + ex.getMessage()
-    }
+  }
+  catch (Exception ex) {
+    gerrit.unlockPatchSet()
+    echo 'INFO: Unlocked Patchset'
+    error 'Deployment Failed: ' + ex.getMessage()
+  }
 }

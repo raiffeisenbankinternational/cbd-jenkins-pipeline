@@ -94,20 +94,20 @@ def checkJira() {
 
 def close() {
     withCredentials([usernamePassword(credentialsId: 'jira-http', passwordVariable: 'JIRA_PW', usernameVariable: 'JIRA_USER')]) {
-        sh label: 'Close related Jira issue', script: """#!/bin/bash
-     set -xeu pipefail
-     CHECK_GERRIT_BUILD="${env.GERRIT_CHANGE_SUBJECT}"
-     if [[ "\${CHECK_GERRIT_BUILD}" == null ]] ; then
-       echo "INFO: skipping JIRA test"
-       exit 0
-     fi
-     JIRA_PATTERN="^\\[[a-zA-Z0-9,\\.\\_\\-]+-[0-9]+\\]"
-     JIRA_ISSUE="\$(echo "${env.GERRIT_CHANGE_SUBJECT}" | grep -o -E "\${JIRA_PATTERN}" | sed 's/^\\[\\(.*\\)\\]\$/\\1/')"
-     DONE_WORKFLOW_ID="\$(curl -s -u ${JIRA_USER}:${JIRA_PW} ${GLOBAL_JIRA_URL}/rest/api/2/issue/\${JIRA_ISSUE}/transitions?transitionId | \
-     jq -re '.transitions[] | select(.name=="Done") | .id')"
-     curl -D- -u ${JIRA_USER}:${JIRA_PW} -X POST --data '{ "transition": { "id": '"\${DONE_WORKFLOW_ID}"' } }'  -H "Content-Type: application/json" \
-     ${GLOBAL_JIRA_URL}/rest/api/2/issue/\${JIRA_ISSUE}/transitions?transitionId
-   """
+      sh (label: 'Close related Jira issue', script: """#!/bin/bash
+        set -xeu pipefail
+        CHECK_GERRIT_BUILD="${env.GERRIT_CHANGE_SUBJECT}"
+        if [[ "\${CHECK_GERRIT_BUILD}" == null ]] ; then
+          echo "INFO: skipping JIRA test"
+          exit 0
+        fi
+        JIRA_PATTERN="^\\[[a-zA-Z0-9,\\.\\_\\-]+-[0-9]+\\]"
+        JIRA_ISSUE="\$(echo "${env.GERRIT_CHANGE_SUBJECT}" | grep -o -E "\${JIRA_PATTERN}" | sed 's/^\\[\\(.*\\)\\]\$/\\1/')"
+        DONE_WORKFLOW_ID="\$(curl -s -u ${JIRA_USER}:${JIRA_PW} ${GLOBAL_JIRA_URL}/rest/api/2/issue/\${JIRA_ISSUE}/transitions?transitionId | \
+        jq -re '.transitions[] | select(.name=="Done") | .id')"
+        curl -D- -u ${JIRA_USER}:${JIRA_PW} -X POST --data '{ "transition": { "id": '"\${DONE_WORKFLOW_ID}"' } }'  -H "Content-Type: application/json" \
+        ${GLOBAL_JIRA_URL}/rest/api/2/issue/\${JIRA_ISSUE}/transitions?transitionId
+      """)
     }
 }
 

@@ -8,11 +8,11 @@ def doCheckout() {
        buildChooser: [$class: 'GerritTriggerBuildChooser']
     ],
     [
-        $class: 'SubmoduleOption', 
-        disableSubmodules: false, 
-        parentCredentials: true, 
-        recursiveSubmodules: true, 
-        reference: '', 
+        $class: 'SubmoduleOption',
+        disableSubmodules: false,
+        parentCredentials: true,
+        recursiveSubmodules: true,
+        reference: '',
         trackingSubmodules: false
       ]],
    submoduleCfg: [],
@@ -49,7 +49,7 @@ def checkSubmitStatus(deployTarget) {
                          --data '{"message": "Ready for production","labels":{"Patch-Set-Lock": 1}}' > /dev/null
             fi
             """).trim()
-            
+
       echo "Status: ${submitStatus}"
       if (submitStatus.startsWith("INFO: Ready")) {
         sh(label: 'Ready to submit', script: "echo '${submitStatus}' && exit 0")
@@ -65,7 +65,7 @@ def checkSubmitStatus(deployTarget) {
 
 def submitChange() {
   withCredentials([sshUserPrivateKey(credentialsId: 'gerrit-ssh', keyFileVariable: 'SSHFILEPATH', passphraseVariable: 'SSHPASSPHRASE', usernameVariable: 'SSHUSERNAME')]) {
-    sh """#!/bin/bash
+    sh(label: "Submit change", script: """#!/bin/bash
         CHECK_GERRIT_BUILD="${env.GERRIT_CHANGE_SUBJECT}"
         if [[ "\${CHECK_GERRIT_BUILD}" == null ]] ; then
           echo "INFO: skipping Gerrit submit"
@@ -76,13 +76,13 @@ def submitChange() {
              
         curl -b ~/.gitcookie --fail -v -XPOST https://${GERRIT_URL}/a/changes/${GERRIT_CHANGE_ID}/submit \
              --data '{}'
-    """
+    """)
   }
 }
 
 def unlockPatchSet () {
   withCredentials([sshUserPrivateKey(credentialsId: 'gerrit-ssh', keyFileVariable: 'SSHFILEPATH', passphraseVariable: 'SSHPASSPHRASE', usernameVariable: 'SSHUSERNAME')]) {
-    sh """#!/bin/bash
+    sh(label: "Unlock patchset", script: """#!/bin/bash
       CHECK_GERRIT_BUILD="${env.GERRIT_CHANGE_SUBJECT}"
       if [[ "\${CHECK_GERRIT_BUILD}" == null ]] ; then
         echo "INFO: skipping Gerrit unlockPatchSet"
@@ -91,7 +91,7 @@ def unlockPatchSet () {
       curl -b ~/.gitcookie --fail -v -XPOST https://${GERRIT_URL}/a/changes/${GERRIT_CHANGE_ID}/revisions/current/review \
              --data '{"message": "Unlocking","labels":{"Patch-Set-Lock": 0}}'
 
-    """
+    """)
   }
 }
 
