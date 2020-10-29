@@ -1,26 +1,6 @@
 import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
 
 
-def runTests(accountId, environmentNameUpper, deployTarget) {
-    ansiColor('xterm') {
-        sh """
-            export AWS_ACCOUNT_ID="${accountId}"
-            export ENVIRONMENT_NAME="${environmentNameUpper}"
-            export DEPLOY_TARGET="${deployTarget}"
-
-            export TargetAccountId="${accountId}"
-            export ServiceName="\${PROJECT_NAME}"
-            export EnvironmentNameUpper="${environmentNameUpper}"
-
-            export BUILD_DOCKER_IMAGE="${env.DOCKER_URL}/${DOCKER_ORG}/${JOB_BASE_NAME}:b${BUILD_ID}"
-            if [[ -f Dockerfile.runtime ]]; then
-               export BUILD_DOCKER_IMAGE="${env.DOCKER_URL}/${DOCKER_ORG}/${JOB_BASE_NAME}-runtime:b${BUILD_ID}"
-            fi
- 
-            /dist/deploy.sh "glms-deploy-lib/run-all-tests" 
-           """
-    }
-}
 
 Boolean testJob = false
 String testTarget = ""
@@ -58,27 +38,31 @@ node(agentLabel) {
         gerrit.doCheckout()
         gerrit.init();
 
-        withCredentials([usernamePassword(credentialsId: 'docker-push-http', usernameVariable: 'DOCKER_USERNAME', passwordVariable: "DOCKER_PASSWORD"),
+        withCredentials([usernamePassword(credentialsId: 'docker-http', usernameVariable: 'DOCKER_USERNAME', passwordVariable: "DOCKER_PASSWORD"),
                          usernamePassword(credentialsId: 'gerrit-http', usernameVariable: 'GIT_USERNAME', passwordVariable: "GIT_PASSWORD")]) {
           ansiColor('xterm') {
             sh(label: "Build docker images", script: """#!/bin/bash
               set -ex
               docker login --username "\${DOCKER_USERNAME}" --password "\${DOCKER_PASSWORD}" ${env.DOCKER_PUSH_URL}
-               docker build ${GLOBAL_PROPERTIES_DOCKER_BUILD_ARGS} \
+
+              docker build ${GLOBAL_PROPERTIES_DOCKER_BUILD_ARGS} \
                    --secret id=gitcookie,src=/home/jenkins/.gitcookie \
                    --build-arg DEPLOY_TARGET="${deployTarget}" \
                    -t "${env.DOCKER_URL}/${DOCKER_ORG}/\${JOB_BASE_NAME}:b\${BUILD_ID}"  .
-               if [[ -f Dockerfile.runtime ]]; then
+
+              if [[ -f Dockerfile.runtime ]]; then
                 echo "Building runtime image"
                 docker build \${GLOBAL_PROPERTIES_DOCKER_BUILD_ARGS} \
                    --secret id=gitcookie,src=/home/jenkins/.gitcookie \
                   --build-arg BUILD_ID=\${BUILD_ID} \
                   -t "${env.DOCKER_URL}/${DOCKER_ORG}/\${JOB_BASE_NAME}-runtime:b\${BUILD_ID}" -f Dockerfile.runtime .
               fi
-                docker tag "${env.DOCKER_URL}/${DOCKER_ORG}/\${JOB_BASE_NAME}:b\${BUILD_ID}" \
-                "${env.DOCKER_PUSH_URL}/${DOCKER_ORG}/\${JOB_BASE_NAME}:b\${BUILD_ID}"
-               docker push "${env.DOCKER_PUSH_URL}/${DOCKER_ORG}/\${JOB_BASE_NAME}:b\${BUILD_ID}"
-                if [[ -f Dockerfile.runtime ]]; then
+
+              docker tag "${env.DOCKER_URL}/${DOCKER_ORG}/\${JOB_BASE_NAME}:b\${BUILD_ID}" \
+                  "${env.DOCKER_PUSH_URL}/${DOCKER_ORG}/\${JOB_BASE_NAME}:b\${BUILD_ID}"
+
+              docker push "${env.DOCKER_PUSH_URL}/${DOCKER_ORG}/\${JOB_BASE_NAME}:b\${BUILD_ID}"
+              if [[ -f Dockerfile.runtime ]]; then
                  echo "Pushing runtime"
                  docker tag  \
                     "${env.DOCKER_URL}/${DOCKER_ORG}/\${JOB_BASE_NAME}-runtime:b\${BUILD_ID}" \
@@ -112,6 +96,10 @@ node(agentLabel) {
             stage('Configure Deployment') {
 
                 sh 'mkdir -p /dist/release-libs'
+                def config = jenkins.readConfig()
+
+                String testAccount = config["testAccount"]
+                String prodAccount = config["prodAccount"]
 
                 repo.uploadLibs(deployTarget, false)
                 wrap([$class: 'BuildUser']) {
@@ -120,9 +108,9 @@ node(agentLabel) {
                     def testStageName = "Deploy to TEST"
                     stage(testStageName) {
                         if (deployTarget == "PROD" || env.GERRIT_TOPIC == "env/TEST01") {
-                            repo.deploy(env.GLOBAL_PROPERTIES_TEST_AWS_ACCOUNT, "TEST01", deployTarget)
+                            jenkins.deploy(testAccount, "TEST01", deployTarget)
                             if (deployTarget == "PROD") {
-                                runTests(env.GLOBAL_PROPERTIES_TEST_AWS_ACCOUNT, "TEST01", deployTarget)
+                                jenkins.runTests(testAccount, "TEST01", deployTarget)
                             }
                             deployed = true
                             deployedToProd = true
@@ -134,11 +122,13 @@ node(agentLabel) {
                     def prodStageName = "Deploy to PROD"
                     stage(prodStageName) {
                         if (deployTarget == "PROD") {
-                            repo.deploy(env.GLOBAL_PROPERTIES_PROD_AWS_ACCOUNT, "PROD01", deployTarget)
-                            runTests(env.GLOBAL_PROPERTIES_PROD_AWS_ACCOUNT, "PROD01", deployTarget)
+                            jenkins.deploy(prodAccount, "PROD01", deployTarget)
+                            jenkins.runTests(prodAccount, "PROD01", deployTarget)
 
-                            gerrit.submitChange()
-                            jira.close()
+                            if (env.GERRIT_CHANGE_ID) {
+                              gerrit.submitChange()
+                              jira.close()
+                            }
                             deployed = true
                             deployedToProd = true
                         } else {
@@ -146,9 +136,7 @@ node(agentLabel) {
                         }
                     }
 
-                    def devAccounts = jenkins.parseJson("${GLOBAL_PROPERTIES_AWS_ACCOUNTS}")
 
-                    print devAccounts
                     String gerritTopic = env.GERRIT_TOPIC
                     if (env.GERRIT_TOPIC && gerritTopic.split('/')[0] == "env") {
                         testJob = true
@@ -161,7 +149,11 @@ node(agentLabel) {
                     String changeOwnerEmail = env.GERRIT_CHANGE_OWNER_EMAIL ? env.GERRIT_CHANGE_OWNER_EMAIL : "";
                     echo "Change owner email: " + changeOwnerEmail
 
-                    devAccounts.accounts.each { account ->
+
+                    def devAccounts = config["devAccounts"]
+                    print devAccounts
+                    print devAccounts.size()
+                    devAccounts.each { account ->
                         String accountOwner = account.owner
                         String accountName = account.name
                         String accountId = account.accountId
@@ -198,7 +190,7 @@ node(agentLabel) {
                             }
                             echo "Selected account: ${AWS_ACCOUNT_ID}"
                             if (AWS_ACCOUNT_ID && !deployedToProd) {
-                                repo.deploy(AWS_ACCOUNT_ID, ENVIRONMENT_NAME, deployTarget)
+                                jenkins.deploy(AWS_ACCOUNT_ID, ENVIRONMENT_NAME, deployTarget)
                                 deployed = true
                             } else {
                                 Utils.markStageSkippedForConditional(stageName)

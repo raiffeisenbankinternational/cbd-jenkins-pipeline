@@ -58,7 +58,7 @@ def uploadJar(String file, deployTarget) {
     String credentials = "artifact-deploy-dev-http"
     if (deployTarget == "PROD") {
         repo = "${env.GLOBAL_REPOSITORY_PROD_URL}";
-        credentials = "artifact-deploy-prod-http"
+        credentials = "artifact-deploy-http"
     }
     upload("/dist/release-libs/" + file,
             "/dist/release-libs/" + file + ".pom.xml",

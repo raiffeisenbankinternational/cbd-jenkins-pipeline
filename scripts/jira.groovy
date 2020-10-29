@@ -1,6 +1,12 @@
 def checkJira() {
   withCredentials([usernamePassword(credentialsId: 'jira-http', passwordVariable: 'JIRA_PW', usernameVariable: 'JIRA_USER'),
   sshUserPrivateKey(credentialsId: 'gerrit-ssh', keyFileVariable: 'SSHFILEPATH', passphraseVariable: 'SSHPASSPHRASE', usernameVariable: 'SSHUSERNAME')]) {
+    echo "INFO: Check jira ticket status"
+    if (!env.GERRIT_CHANGE_SUBJECT) {
+      echo "INFO: skipping Gerrit submit test"
+      return true;
+    }
+
     String gerritMessage = sh(label: 'Check errit commit message', returnStdout: true, script: """#!/bin/bash
        curl -b ~/.gitcookie --fail -v \
                        https://${GERRIT_URL}/a/changes/${GERRIT_CHANGE_ID}/revisions/${GERRIT_PATCHSET_REVISION}/commit \

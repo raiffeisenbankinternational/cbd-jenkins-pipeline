@@ -26,7 +26,7 @@ gerrit-ssh # private key for non-interractive user in gerrit
 jira-http # username/password for jira (In cloud is API key)
 artifact-deploy-dev-http # username/password for deploying artifacts (i.e. nexus)
 artifact-deploy-prod-http # username/password for deploying artifacts (i.e. nexus)
-docker-push-http # username/password for pushing docker images to registry
+docker-http # username/password for pushing docker images to registry
 gerrit-http # username/password for non-interractive user in gerrit
 ```
 

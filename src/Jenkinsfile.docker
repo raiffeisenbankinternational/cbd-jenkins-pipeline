@@ -70,7 +70,7 @@ node(agentLabel) {
         """
     }
     stage("Deploy") {
-        withCredentials([usernamePassword(credentialsId: 'docker-push-http', usernameVariable: 'USERNAME', passwordVariable: "PASSWORD")]) {
+        withCredentials([usernamePassword(credentialsId: 'docker-http', usernameVariable: 'USERNAME', passwordVariable: "PASSWORD")]) {
             sh """
                  for i in \$(ls *-Dockerfile.* | sort); do 
                      echo "Pushing \${i}"
