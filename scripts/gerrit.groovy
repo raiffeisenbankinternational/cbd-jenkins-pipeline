@@ -71,10 +71,10 @@ def submitChange() {
           echo "INFO: skipping Gerrit submit"
           exit 0
         fi
-        curl -b ~/.gitcookie --fail -v https://${GERRIT_URL}/a/changes/${GERRIT_CHANGE_ID}/revisions/current/review \
+        curl -b ~/.gitcookie --fail https://${GERRIT_URL}/a/changes/${GERRIT_CHANGE_ID}/revisions/current/review \
              --data '{"message": "Looking good","labels":{"Verified": 1}}'
              
-        curl -b ~/.gitcookie --fail -v https://${GERRIT_URL}/a/changes/${GERRIT_CHANGE_ID}/submit \
+        curl -b ~/.gitcookie --fail https://${GERRIT_URL}/a/changes/${GERRIT_CHANGE_ID}/submit \
              --data '{}'
     """)
   }
@@ -88,7 +88,7 @@ def unlockPatchSet () {
         echo "INFO: skipping Gerrit unlockPatchSet"
         exit 0
       fi
-      curl -b ~/.gitcookie --fail -v https://${GERRIT_URL}/a/changes/${GERRIT_CHANGE_ID}/revisions/current/review \
+      curl -b ~/.gitcookie --fail https://${GERRIT_URL}/a/changes/${GERRIT_CHANGE_ID}/revisions/current/review \
              --data '{"message": "Unlocking","labels":{"Patch-Set-Lock": 0}}'
 
     """)
