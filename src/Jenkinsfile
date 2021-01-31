@@ -38,15 +38,18 @@ node(agentLabel) {
         gerrit.doCheckout()
         gerrit.init();
 
-        withCredentials([usernamePassword(credentialsId: 'docker-http', usernameVariable: 'DOCKER_USERNAME', passwordVariable: "DOCKER_PASSWORD"),
+        withCredentials([configFile(fileId: 'global-maven-settings', variable: 'MAVEN_SETTINGS'),
+                         usernamePassword(credentialsId: 'docker-http', usernameVariable: 'DOCKER_USERNAME', passwordVariable: "DOCKER_PASSWORD"),
                          usernamePassword(credentialsId: 'gerrit-http', usernameVariable: 'GIT_USERNAME', passwordVariable: "GIT_PASSWORD")]) {
           ansiColor('xterm') {
             sh(label: "Build docker images", script: """#!/bin/bash
               set -ex
+              cat $MAVEN_SETTINGS
               docker login --username "\${DOCKER_USERNAME}" --password "\${DOCKER_PASSWORD}" ${env.DOCKER_PUSH_URL}
 
               docker build ${GLOBAL_PROPERTIES_DOCKER_BUILD_ARGS} \
                    --secret id=gitcookie,src=/home/jenkins/.gitcookie \
+                   --secret id=settings.xml,src=$MAVEN_SETTINGS \
                    --build-arg DEPLOY_TARGET="${deployTarget}" \
                    -t "${env.DOCKER_URL}/${DOCKER_ORG}/\${JOB_BASE_NAME}:b\${BUILD_ID}"  .
 
@@ -54,8 +57,9 @@ node(agentLabel) {
                 echo "Building runtime image"
                 docker build \${GLOBAL_PROPERTIES_DOCKER_BUILD_ARGS} \
                    --secret id=gitcookie,src=/home/jenkins/.gitcookie \
-                  --build-arg BUILD_ID=\${BUILD_ID} \
-                  -t "${env.DOCKER_URL}/${DOCKER_ORG}/\${JOB_BASE_NAME}-runtime:b\${BUILD_ID}" -f Dockerfile.runtime .
+                   --secret id=settings.xml,src=$MAVEN_SETTINGS \
+                   --build-arg BUILD_ID=\${BUILD_ID} \
+                   -t "${env.DOCKER_URL}/${DOCKER_ORG}/\${JOB_BASE_NAME}-runtime:b\${BUILD_ID}" -f Dockerfile.runtime .
               fi
 
               docker tag "${env.DOCKER_URL}/${DOCKER_ORG}/\${JOB_BASE_NAME}:b\${BUILD_ID}" \
