@@ -102,6 +102,7 @@ def init() {
   sh 'mkdir -p resources'
   sh 'mkdir -p schema'
   sh 'mkdir -p api'
+  sh 'mkdir -p lib'
 }
 
 return this
