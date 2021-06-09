@@ -7,7 +7,7 @@ def checkJira() {
       return true;
     }
 
-    String gerritMessage = sh(label: 'Check errit commit message', returnStdout: true, script: """#!/bin/bash
+    String gerritMessage = sh(label: 'Check gerrit commit message', returnStdout: true, script: """#!/bin/bash
        curl -b ~/.gitcookie --fail -v \
                        https://${GERRIT_URL}/a/changes/${GERRIT_CHANGE_ID}/revisions/${GERRIT_PATCHSET_REVISION}/commit \
                        | tail +2 \
@@ -51,8 +51,8 @@ def checkJira() {
                 echo "INFO: Issue and commit message are the same, nothing to update"
                 exit 0
               fi
-
-              curl -f -D- -u "${JIRA_USER}:${JIRA_PW}" -X PUT --data "\${API_DATA}" -H "\${CONT_TYPE}" "${GLOBAL_JIRA_URL}/rest/api/2/issue/\${JIRA_ISSUE}"
+              echo "\${API_DATA}"
+              curl -v -f -D- -u  "${JIRA_USER}:${JIRA_PW}" -X PUT --data "\${API_DATA}" -H "\${CONT_TYPE}" "${GLOBAL_JIRA_URL}/rest/api/2/issue/\${JIRA_ISSUE}"
             }
 
             CHECK_GERRIT_BUILD="${env.GERRIT_CHANGE_SUBJECT}"
@@ -82,6 +82,7 @@ def checkJira() {
               exit 0
             else
               echo "ERROR: Unknown error during Jira issue ckeck"
+            echo "Jira check is done!"
             exit 0
             fi
             """).trim()

@@ -81,9 +81,21 @@ node(agentLabel) {
   
                      docker push "${env.DOCKER_PUSH_URL}/${DOCKER_ORG}/\${i#*.}:b${BUILD_ID}"
                  done
+               """
+            if (deployTarget == "PROD") {
+                 sh """
+                   for i in \$(ls *-Dockerfile.* | sort); do 
+                     echo "Pushing \${i}"
+                     echo $PASSWORD | docker login -u $USERNAME --password-stdin ${env.DOCKER_PUSH_URL}
+                     docker tag  \
+                       "${env.DOCKER_URL}/${DOCKER_ORG}/\${i#*.}:b${BUILD_ID}" \
+                       "${env.DOCKER_PUSH_URL}/${DOCKER_ORG}/\${i#*.}:latest"
+  
+                     docker push "${env.DOCKER_PUSH_URL}/${DOCKER_ORG}/\${i#*.}:latest"
+                   done
                  """
+            }
         }
-
     }
 
     stage("Release") {
