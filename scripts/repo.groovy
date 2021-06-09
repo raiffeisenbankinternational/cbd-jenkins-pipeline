@@ -53,7 +53,7 @@ def uploadJar(String file, deployTarget) {
     String name = file.substring(0, file.lastIndexOf('.'));
     String version = name.substring(name.lastIndexOf('-') + 1);
     String artifactId = name.substring(0, name.lastIndexOf('-'));
-    String groupId = env.GLOBAL_GROUP_ID;
+    String groupId = env.ARTIFACT_ORG;
     String repo = "${env.GLOBAL_REPOSITORY_DEV_URL}";
     String credentials = "artifact-deploy-dev-http"
     if (deployTarget == "PROD") {
