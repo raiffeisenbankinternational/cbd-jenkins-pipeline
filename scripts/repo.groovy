@@ -60,6 +60,16 @@ def uploadJar(String file, deployTarget) {
         repo = "${env.GLOBAL_REPOSITORY_PROD_URL}";
         credentials = "artifact-deploy-http"
     }
+    if (deployTarget == "PROD") {
+        repo = "${env.GLOBAL_REPOSITORY_PROD_URL}";
+        credentials = "artifact-deploy-http"
+    }
+
+    if (env.PUBLIC_RELEASE == "true") {
+        repo = "${env.GLOBAL_REPOSITORY_PUBLIC_URL}";
+        credentials = "artifact-deploy-public-http"
+    }
+
     upload("/dist/release-libs/" + file,
             "/dist/release-libs/" + file + ".pom.xml",
             artifactId,
