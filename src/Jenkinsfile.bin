@@ -55,6 +55,7 @@ node(agentLabel) {
         if (deployTarget == "PROD") {
             gerrit.submitChange()
             jira.close()
+            gerrit.maybePushToPublic()
         } else {
             Utils.markStageSkippedForConditional("Release")
         }

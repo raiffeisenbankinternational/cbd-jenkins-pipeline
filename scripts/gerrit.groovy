@@ -96,6 +96,20 @@ def unlockPatchSet () {
 }
 
 
+def maybePushToPublic() {
+  if (env.PUBLIC_RELEASE && env.PUBLIC_RELEASE == "true") {
+   withCredentials([usernamePassword(credentialsId: "github-http", usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_PASSWORD')]) {
+     sh(label: "Push to public", script: """#!/bin/bash
+         set -e
+         echo "Pushing to public \$last_commit_id"
+         last_commit_id=\$(git log --format="%H" -n 1)
+         git config credential.helper '!f() { sleep 1; echo "username=${GIT_USERNAME}"; echo "password=${GIT_PASSWORD}"; }; f'
+         git push ${env.PUBLIC_URL} \$last_commit_id:refs/heads/master
+     """)
+     }
+  }
+}
+
 def init() {
   sh 'mkdir -p ansible'
   sh 'mkdir -p test'

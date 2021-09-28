@@ -53,21 +53,19 @@ def uploadJar(String file, deployTarget) {
     String name = file.substring(0, file.lastIndexOf('.'));
     String version = name.substring(name.lastIndexOf('-') + 1);
     String artifactId = name.substring(0, name.lastIndexOf('-'));
-    String groupId = env.ARTIFACT_ORG;
+    String groupId = env.ARTIFACT_DEV_ORG;
     String repo = "${env.GLOBAL_REPOSITORY_DEV_URL}";
     String credentials = "artifact-deploy-dev-http"
     if (deployTarget == "PROD") {
-        repo = "${env.GLOBAL_REPOSITORY_PROD_URL}";
-        credentials = "artifact-deploy-http"
-    }
-    if (deployTarget == "PROD") {
-        repo = "${env.GLOBAL_REPOSITORY_PROD_URL}";
-        credentials = "artifact-deploy-http"
-    }
-
-    if (env.PUBLIC_RELEASE == "true") {
-        repo = "${env.GLOBAL_REPOSITORY_PUBLIC_URL}";
-        credentials = "artifact-deploy-public-http"
+        if (env.PUBLIC_RELEASE && env.PUBLIC_RELEASE == "true") {
+            repo = "${env.GLOBAL_REPOSITORY_PUBLIC_URL}";
+            credentials = "artifact-deploy-public-http"
+            groupId = "${env.ARTIFACT_PUBLIC_ORG}";
+        } else {
+            repo = "${env.GLOBAL_REPOSITORY_PROD_URL}";
+            credentials = "artifact-deploy-http"
+            groupId = "${env.ARTIFACT_ORG}";
+        }
     }
 
     upload("/dist/release-libs/" + file,
