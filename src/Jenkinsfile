@@ -46,7 +46,7 @@ node(agentLabel) {
               cat $MAVEN_SETTINGS
               docker login --username "\${DOCKER_USERNAME}" --password "\${DOCKER_PASSWORD}" ${env.DOCKER_PUSH_URL}
 
-              docker build ${GLOBAL_PROPERTIES_DOCKER_BUILD_ARGS} \
+              docker build --pull ${GLOBAL_PROPERTIES_DOCKER_BUILD_ARGS} \
                    --secret id=gitcookie,src=/home/jenkins/.gitcookie \
                    --secret id=settings.xml,src=$MAVEN_SETTINGS \
                    --build-arg DEPLOY_TARGET="${deployTarget}" \
@@ -54,7 +54,7 @@ node(agentLabel) {
 
               if [[ -f Dockerfile.runtime ]]; then
                 echo "Building runtime image"
-                docker build \${GLOBAL_PROPERTIES_DOCKER_BUILD_ARGS} \
+                docker build --pull \${GLOBAL_PROPERTIES_DOCKER_BUILD_ARGS} \
                    --secret id=gitcookie,src=/home/jenkins/.gitcookie \
                    --secret id=settings.xml,src=$MAVEN_SETTINGS \
                    --build-arg BUILD_ID=\${BUILD_ID} \
