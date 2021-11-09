@@ -97,7 +97,7 @@ def unlockPatchSet () {
 
 
 def maybePushToPublic() {
-  if (env.PUBLIC_RELEASE && env.PUBLIC_RELEASE == "true") {
+  if (env.PUBLIC_PUSH && env.PUBLIC_PUSH == "true") {
    withCredentials([usernamePassword(credentialsId: "github-http", usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_PASSWORD')]) {
      sh(label: "Push to public", script: """#!/bin/bash
          set -e

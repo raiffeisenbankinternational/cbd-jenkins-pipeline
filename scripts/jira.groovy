@@ -104,7 +104,7 @@ def close() {
         set -xeu pipefail
         CHECK_GERRIT_BUILD="${env.GERRIT_CHANGE_SUBJECT}"
         if [[ "\${CHECK_GERRIT_BUILD}" == null ]] ; then
-          echo "INFO: skipping JIRA test"
+          echo "INFO: skipping JIRA closing"
           exit 0
         fi
         JIRA_PATTERN="^\\[[a-zA-Z0-9,\\.\\_\\-]+-[0-9]+\\]"
