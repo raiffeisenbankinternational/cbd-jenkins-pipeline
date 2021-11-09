@@ -49,7 +49,7 @@ node(agentLabel) {
         withDockerContainer(args: dockerBuildArgs,
                 image: dockerImageUrl) {
 
-            repo.uploadLibs(deployTarget)
+            repo.uploadLibs(deployTarget, true, env.BUILD_ID)
        }
     }
     stage("Release") {
