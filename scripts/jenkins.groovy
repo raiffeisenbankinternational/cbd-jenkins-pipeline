@@ -39,7 +39,7 @@ def runTests(accountId, environmentNameUpper, deployTarget) {
                export BUILD_DOCKER_IMAGE="${env.DOCKER_URL}/${DOCKER_ORG}/${JOB_BASE_NAME}-runtime:b${BUILD_ID}"
             fi
  
-            /dist/deploy.sh "glms-deploy-lib/run-all-tests" 
+            /dist/ext/deploy.sh "glms-deploy-lib/run-all-tests" 
            """)
     }
 }
@@ -61,7 +61,7 @@ def deploy(accountId, environmentNameUpper, deployTarget) {
                export BUILD_DOCKER_IMAGE="${env.DOCKER_URL}/${DOCKER_ORG}/${JOB_BASE_NAME}-runtime:b${BUILD_ID}"
             fi
 
-            /dist/deploy.sh
+            /dist/ext/deploy.sh
            """
     }
 }

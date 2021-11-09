@@ -6,13 +6,12 @@ def upload(String file, String pomFile, String artifactId, String groupId, Strin
                ARTIFACT_ID=${artifactId}
                GROUP_ID=${groupId}
                FILE=${file}
-
                ARTIFACT_NAME=\$(basename \${FILE})
                PACKAGING=\${ARTIFACT_NAME##*.}
                echo "Deploying: \${GROUP_ID}:\${ARTIFACT_ID} on file \${FILE} packaged as \${PACKAGING}  with version: \${VERSION}"
                mvn deploy:deploy-file \
                  -DgroupId=\${GROUP_ID} \
-                 -DartifactIda=\${ARTIFACT_NAME} \
+                 -DartifactId=\${ARTIFACT_ID} \
                  -Dversion=\${VERSION} \
                  -Dpackaging=\${PACKAGING} \
                  -Dfile=\${FILE} \
@@ -42,20 +41,30 @@ def deploy(accountId, environmentNameUpper, deployTarget) {
             if [[ -f Dockerfile.runtime ]]; then
                export BUILD_DOCKER_IMAGE="${env.DOCKER_URL}/${DOCKER_ORG}/${JOB_BASE_NAME}-runtime:b${BUILD_ID}"
             fi
-
-            /dist/deploy.sh
+            /dist/ext/deploy.sh
            """)
     }
 }
 
 
-def uploadJar(String file, deployTarget) {
+def uploadJar(String fileName, deployTarget, String buildId) {
+    String file = fileName[0..-9]
+    echo "Uploading file $file"
+
     String name = file.substring(0, file.lastIndexOf('.'));
-    String version = name.substring(name.lastIndexOf('-') + 1);
+    String version = fileName.substring(fileName.lastIndexOf('-') + 1);
+    echo "Part version $version"
+    version = (version =~ /(^[\d\.b]+)[\.]+/).findAll()[0][1]
+    echo "Pre-last version $version"
+    number = version.replace("b", "").substring(0, version.lastIndexOf('.'));
+    version = number + "." + buildId
+    echo "Final version $version"
+
+
     String artifactId = name.substring(0, name.lastIndexOf('-'));
     String groupId = env.ARTIFACT_DEV_ORG;
     String repo = "${env.GLOBAL_REPOSITORY_DEV_URL}";
-    String credentials = "artifact-deploy-dev-http"
+    String credentials = "glms-deploy"
     if (deployTarget == "PROD") {
         if (env.PUBLIC_RELEASE && env.PUBLIC_RELEASE == "true") {
             repo = "${env.GLOBAL_REPOSITORY_PUBLIC_URL}";
@@ -77,19 +86,30 @@ def uploadJar(String file, deployTarget) {
             credentials)
 }
 
-def uploadLibs(String deployTarget, Boolean required = true) {
+def uploadLibs(String deployTarget, Boolean required = true, String buildId) {
     echo "Checking for libs to push"
     String fileList = sh(script: "ls   '/dist/release-libs'", returnStdout: true)
     String FILES_LIST = fileList.trim()
     echo "FILES_LIST : ${FILES_LIST}"
     if (!FILES_LIST?.trim() && required) {
-       sh(label: "No libs found to deploy!", script: "echo 'No libs found to deploy!!' && exit 1", returnStdout: true)
+        sh(label: "No libs found to deploy!", script: "echo 'No libs found to deploy!!' && exit 1", returnStdout: true)
     }
     for (String file : FILES_LIST.split("\\r?\\n")) {
         echo "Listing: ${file}"
-        if (file.endsWith(".jar")) {
-            echo "Found file: ${file}"
-            uploadJar(file, deployTarget)
+        if (file.endsWith(".pom.xml") && ! file.endsWith(".jar.pom.xml")) {
+          String stripped = file[0..-9] + ".jar.pom.xml"
+          sh(label: "Fallback for broken deployment", script: "a=/dist/release-libs/$file; mv \$a /dist/release-libs/$stripped")
         }
-    }}
+    }
+    fileList = sh(script: "ls   '/dist/release-libs'", returnStdout: true)
+    FILES_LIST = fileList.trim()
+    echo "FILES_LIST : ${FILES_LIST}"
+    for (String file : FILES_LIST.split("\\r?\\n")) {
+        echo "Listing: ${file}"
+        if (file.endsWith(".pom.xml")) {
+            echo "Found file: ${file}"
+            uploadJar(file, deployTarget, buildId)
+        }
+    }
+}
 return this;

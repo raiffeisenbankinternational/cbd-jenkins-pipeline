@@ -52,7 +52,7 @@ def checkJira() {
                 exit 0
               fi
               echo "\${API_DATA}"
-              curl -v -f -D- -u  "${JIRA_USER}:${JIRA_PW}" -X PUT --data "\${API_DATA}" -H "\${CONT_TYPE}" "${GLOBAL_JIRA_URL}/rest/api/2/issue/\${JIRA_ISSUE}"
+              curl -k -f -D- -u  "${JIRA_USER}:${JIRA_PW}" -X PUT --data "\${API_DATA}" -H "\${CONT_TYPE}" "${GLOBAL_JIRA_URL}/rest/api/2/issue/\${JIRA_ISSUE}"
             }
 
             CHECK_GERRIT_BUILD="${env.GERRIT_CHANGE_SUBJECT}"
@@ -66,7 +66,7 @@ def checkJira() {
                         echo "ERROR: Pattern does not match. Please use [JIRA-123] syntax in commit messages"
               exit 0
             fi
-            JIRA_STATUS="\$(curl -s -u ${JIRA_USER}:${JIRA_PW} ${GLOBAL_JIRA_URL}/rest/api/2/issue/\${JIRA_ISSUE})"
+            JIRA_STATUS="\$(curl -k -s -u ${JIRA_USER}:${JIRA_PW} ${GLOBAL_JIRA_URL}/rest/api/2/issue/\${JIRA_ISSUE})"
 
             if get_status="\$(echo "\${JIRA_STATUS}" | jq -er ".fields.status.name")"; then
                 if [ "\${get_status}" != "In Progress" ] ; then
@@ -94,8 +94,7 @@ def checkJira() {
             sh(label: 'Jira ticket OK', script: "echo '${JIRA_STATUS}' && exit 0")
         } else {
             sh(label: 'Unknown jira error', script: "echo -e '\\e[31m${JIRA_STATUS}\\e[0m' && exit 1")
-        } 
-
+        }
     }
 }
 
@@ -110,9 +109,9 @@ def close() {
         fi
         JIRA_PATTERN="^\\[[a-zA-Z0-9,\\.\\_\\-]+-[0-9]+\\]"
         JIRA_ISSUE="\$(echo "${env.GERRIT_CHANGE_SUBJECT}" | grep -o -E "\${JIRA_PATTERN}" | sed 's/^\\[\\(.*\\)\\]\$/\\1/')"
-        DONE_WORKFLOW_ID="\$(curl -s -u ${JIRA_USER}:${JIRA_PW} ${GLOBAL_JIRA_URL}/rest/api/2/issue/\${JIRA_ISSUE}/transitions?transitionId | \
+        DONE_WORKFLOW_ID="\$(curl -k -s -u ${JIRA_USER}:${JIRA_PW} ${GLOBAL_JIRA_URL}/rest/api/2/issue/\${JIRA_ISSUE}/transitions?transitionId | \
         jq -re '.transitions[] | select(.name=="Done") | .id')"
-        curl -D- -u ${JIRA_USER}:${JIRA_PW} -X POST --data '{ "transition": { "id": '"\${DONE_WORKFLOW_ID}"' } }'  -H "Content-Type: application/json" \
+        curl -k -D- -u ${JIRA_USER}:${JIRA_PW} -X POST --data '{ "transition": { "id": '"\${DONE_WORKFLOW_ID}"' } }'  -H "Content-Type: application/json" \
         ${GLOBAL_JIRA_URL}/rest/api/2/issue/\${JIRA_ISSUE}/transitions?transitionId
       """)
     }

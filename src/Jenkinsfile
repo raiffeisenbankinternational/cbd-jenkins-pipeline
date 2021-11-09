@@ -105,7 +105,7 @@ node(agentLabel) {
                 String testAccount = config["testAccount"]
                 String prodAccount = config["prodAccount"]
 
-                repo.uploadLibs(deployTarget, false)
+                repo.uploadLibs(deployTarget, false, env.BUILD_ID)
                 wrap([$class: 'BuildUser']) {
                     Boolean deployed = false
                     Boolean deployedToProd = false
@@ -169,9 +169,9 @@ node(agentLabel) {
                         String AWS_ACCOUNT_ID
                         String ENVIRONMENT_NAME
 
-                        echo "Bla: " + (changeOwnerEmail == account.owner)
-                        echo "Bla: " + (!testJob)
-                        echo "Bla: " + (changeOwnerEmail == account.owner && !testJob)
+                        echo "Change owner match: " + (changeOwnerEmail == account.owner)
+                        echo "Is test job: " + (!testJob)
+                        echo "Change owner or test job: " + (changeOwnerEmail == account.owner && !testJob)
                         stage(stageName) {
                             if (env.DEPLOY_TO_FRIEND &&
                                     account.name == env.DEPLOY_TO_FRIEND) {
@@ -207,10 +207,15 @@ node(agentLabel) {
                 }
             }
         }
-  }
-  catch (Exception ex) {
-    gerrit.unlockPatchSet()
-    echo 'INFO: Unlocked Patchset'
-    error 'Deployment Failed: ' + ex.getMessage()
-  }
+    }
+    catch (Exception ex) {
+        echo 'INFO: Unlocking Patchset'
+        gerrit.unlockPatchSet()
+        echo 'INFO: Unlocked Patchset: ' + currentBuild.result
+        if (currentBuild.result == "UNSTABLE") {
+          unstable("Unstable build")
+        } else {
+          error 'Deployment Failed: ' + ex.getMessage()
+        }
+    }
 }
