@@ -29,7 +29,7 @@ node("master") {
     echo "Jira check succeed, checking submit status"
     gerrit.checkSubmitStatus(deployTarget)
 
-    stash includes: 'scripts/*,ext/*', name: 'builtSources'
+    stash includes: 'scripts/*,ext/*', name: 'jenkinsfile-scripts'
   }
 }
 
@@ -96,14 +96,16 @@ node(agentLabel) {
     try {
       String dockerImage = "${env.DOCKER_URL}/${DOCKER_ORG}/${env.JOB_BASE_NAME}:b${env.BUILD_ID}"
       withDockerContainer(args: """--group-add 999
+                                   --workdir="/home/build"
                                    -v /home/jenkins/.gitconfig:/home/build/.gitconfig
                                    -v /home/jenkins/.gitcookie:/home/build/.gitcookie
                                    -v ${WORKSPACE}/ext:/dist/ext
                                    -v /var/run/docker.sock:/var/run/docker.sock""",
                 image: dockerImage) {
             stage('Configure Deployment') {
-
-                unstash 'builtSources'
+                sh 'pwd'
+                sh 'ls -la'
+                unstash 'jenkinsfile-scripts'
 
                 sh 'mkdir -p /dist/release-libs'
                 def config = jenkins.readConfig()
