@@ -95,6 +95,7 @@ node(agentLabel) {
       withDockerContainer(args: """--group-add 999
                                    -v /home/jenkins/.gitconfig:/home/build/.gitconfig
                                    -v /home/jenkins/.gitcookie:/home/build/.gitcookie
+                                   -v ${WORKSPACE}/ext:/dist/ext
                                    -v /var/run/docker.sock:/var/run/docker.sock""",
                 image: dockerImage) {
             stage('Configure Deployment') {
