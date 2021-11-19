@@ -64,7 +64,7 @@ def uploadJar(String fileName, deployTarget, String buildId) {
     String artifactId = name.substring(0, name.lastIndexOf('-'));
     String groupId = env.ARTIFACT_DEV_ORG;
     String repo = "${env.GLOBAL_REPOSITORY_DEV_URL}";
-    String credentials = "glms-deploy"
+    String credentials = "artifact-deploy-dev-http"
     if (deployTarget == "PROD") {
         if (env.PUBLIC_RELEASE && env.PUBLIC_RELEASE == "true") {
             repo = "${env.GLOBAL_REPOSITORY_PUBLIC_URL}";
