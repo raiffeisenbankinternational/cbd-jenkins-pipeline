@@ -37,7 +37,6 @@ node("master") {
 node(agentLabel) {
     try {
       stage('Build') {
-        unstash 'builtSources'
 
         gerrit.doCheckout()
         gerrit.init();
@@ -103,6 +102,8 @@ node(agentLabel) {
                                    -v /var/run/docker.sock:/var/run/docker.sock""",
                 image: dockerImage) {
             stage('Configure Deployment') {
+
+                unstash 'builtSources'
 
                 sh 'mkdir -p /dist/release-libs'
                 def config = jenkins.readConfig()
