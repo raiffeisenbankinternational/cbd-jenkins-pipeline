@@ -21,6 +21,7 @@ def jenkins
 node("master") {
   stage('Init') {
     checkout scm
+
     jira = load "scripts/jira.groovy"
     gerrit = load "scripts/gerrit.groovy"
     repo = load "scripts/repo.groovy"
@@ -37,9 +38,9 @@ node("master") {
 node(agentLabel) {
     try {
       stage('Build') {
-
         gerrit.doCheckout()
         gerrit.init();
+
         configFileProvider([configFile(fileId: 'global-maven-settings', variable: 'MAVEN_SETTINGS')]) {
          withCredentials([usernamePassword(credentialsId: 'docker-http', usernameVariable: 'DOCKER_USERNAME', passwordVariable: "DOCKER_PASSWORD"),
                            usernamePassword(credentialsId: 'gerrit-http', usernameVariable: 'GIT_USERNAME', passwordVariable: "GIT_PASSWORD")]) {
@@ -98,7 +99,12 @@ node(agentLabel) {
     try {
       String dockerImage = "${env.DOCKER_URL}/${DOCKER_ORG}/${env.JOB_BASE_NAME}:b${env.BUILD_ID}"
 
+      sh 'id'
       sh 'ls -la'
+      sh 'pwd'
+
+      unstash 'jenkinsfile-scripts'
+
       withDockerContainer(args: """--group-add 999
                                    --workdir="/home/build"
                                    -v /home/jenkins/.gitconfig:/home/build/.gitconfig
@@ -107,9 +113,10 @@ node(agentLabel) {
                                    -v /var/run/docker.sock:/var/run/docker.sock""",
                 image: dockerImage) {
             stage('Configure Deployment') {
-                sh 'pwd'
+
+                sh 'id'
                 sh 'ls -la'
-                unstash 'jenkinsfile-scripts'
+                sh 'pwd'
 
                 sh 'mkdir -p /dist/release-libs'
                 def config = jenkins.readConfig()
