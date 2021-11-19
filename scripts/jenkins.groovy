@@ -23,7 +23,7 @@ def readConfig() {
 
 def runTests(accountId, environmentNameUpper, deployTarget) {
     ansiColor('xterm') {
-        sh(abel: "Running tests", script: """#!/bin/bash
+        sh(label: "Running tests", script: """#!/bin/bash
             set -e
             
             export AWS_ACCOUNT_ID="${accountId}"
@@ -46,7 +46,9 @@ def runTests(accountId, environmentNameUpper, deployTarget) {
 
 def deploy(accountId, environmentNameUpper, deployTarget) {
     ansiColor('xterm') {
-        sh """
+        sh (label: "Deploy stuff", script: """#!/bin/bash
+            set -e
+
             export AWS_ACCOUNT_ID="${accountId}"
             export ENVIRONMENT_NAME="${environmentNameUpper}"
             
@@ -62,7 +64,7 @@ def deploy(accountId, environmentNameUpper, deployTarget) {
             fi
 
             /dist/ext/deploy.sh
-           """
+           """)
     }
 }
 

@@ -28,6 +28,8 @@ node("master") {
     jira.checkJira()
     echo "Jira check succeed, checking submit status"
     gerrit.checkSubmitStatus(deployTarget)
+
+    stash includes: 'scripts/*,ext/*', name: 'builtSources'
   }
 }
 
@@ -35,6 +37,8 @@ node("master") {
 node(agentLabel) {
     try {
       stage('Build') {
+        unstash 'builtSources'
+
         gerrit.doCheckout()
         gerrit.init();
         configFileProvider([configFile(fileId: 'global-maven-settings', variable: 'MAVEN_SETTINGS')]) {
