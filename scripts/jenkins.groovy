@@ -16,7 +16,8 @@ def parseJson(jsonString) {
 def readConfig() {
     String config = sh(label: "Reading config from s3 bucket", returnStdout: true, script: """#!/bin/bash
            set -e
-           aws s3 cp ${env.CONFIG_FILE_URL} -
+           export AWS_DEFAULT_REGION=$(curl --silent http://169.254.169.254/latest/dynamic/instance-identity/document | jq -r .region)
+           aws s3 cp --region "${AWS_DEFAULT_REGION}" ${env.CONFIG_FILE_URL} -
            """)
     return parseJson(config)
 }
