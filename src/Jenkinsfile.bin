@@ -31,6 +31,16 @@ node(agentLabel) {
         gerrit.doCheckout();
         gerrit.init();
 
+        echo "Checking pre-build"
+
+        sh """#/bin/bash
+           set -e
+           if [ -f pre-build.sh ]; then 
+             chmod +x pre-build.sh 
+             ./pre-build.sh
+           fi 
+        """
+
         ansiColor('xterm') {
             sh """
               set -ex
