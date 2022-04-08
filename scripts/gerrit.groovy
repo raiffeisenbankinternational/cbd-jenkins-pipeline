@@ -65,7 +65,8 @@ def checkSubmitStatus(deployTarget) {
 
 def submitChange() {
   withCredentials([sshUserPrivateKey(credentialsId: 'gerrit-ssh', keyFileVariable: 'SSHFILEPATH', passphraseVariable: 'SSHPASSPHRASE', usernameVariable: 'SSHUSERNAME')]) {
-    sh(label: "Submit change", script: """#!/bin/bash
+    if (env.GERRIT_CHANGE_ID) {
+      sh(label: "Submit change", script: """#!/bin/bash
         CHECK_GERRIT_BUILD="${env.GERRIT_CHANGE_SUBJECT}"
         if [[ "\${CHECK_GERRIT_BUILD}" == null ]] ; then
           echo "INFO: skipping Gerrit submit"
@@ -76,7 +77,8 @@ def submitChange() {
              
         curl -b ~/.gitcookie --fail https://${GERRIT_URL}/a/changes/${GERRIT_CHANGE_ID}/submit \
              --data '{}'
-    """)
+      """)
+    }
   }
 }
 
