@@ -30,6 +30,7 @@ node(agentLabel) {
     stage("Build") {
         gerrit.doCheckout();
         gerrit.init();
+
         ansiColor('xterm') {
             sh """
               set -ex

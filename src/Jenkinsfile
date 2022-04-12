@@ -44,6 +44,8 @@ node(agentLabel) {
          withCredentials([usernamePassword(credentialsId: 'docker-http', usernameVariable: 'DOCKER_USERNAME', passwordVariable: "DOCKER_PASSWORD"),
                            usernamePassword(credentialsId: 'gerrit-http', usernameVariable: 'GIT_USERNAME', passwordVariable: "GIT_PASSWORD")]) {
           ansiColor('xterm') {
+
+            sh 'ls -la'
             sh(label: "Build docker images", script: """#!/bin/bash
               set -ex
               cat $MAVEN_SETTINGS
@@ -95,6 +97,8 @@ node(agentLabel) {
     }
     try {
       String dockerImage = "${env.DOCKER_URL}/${DOCKER_ORG}/${env.JOB_BASE_NAME}:b${env.BUILD_ID}"
+
+      sh 'ls -la'
       withDockerContainer(args: """--group-add 999
                                    --workdir="/home/build"
                                    -v /home/jenkins/.gitconfig:/home/build/.gitconfig

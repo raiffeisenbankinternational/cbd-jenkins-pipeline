@@ -111,12 +111,15 @@ def maybePushToPublic() {
 }
 
 def init() {
+  sh 'id'
+  sh 'ls -la'
   sh 'mkdir -p ansible'
   sh 'mkdir -p test'
   sh 'mkdir -p resources'
   sh 'mkdir -p schema'
   sh 'mkdir -p api'
   sh 'mkdir -p lib'
+  sh 'mkdir -p ext'
 }
 
 return this
