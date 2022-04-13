@@ -120,6 +120,7 @@ def init() {
   sh 'mkdir -p api'
   sh 'mkdir -p lib'
   sh 'mkdir -p ext'
+  sh 'mkdir -p www'
 }
 
 return this
