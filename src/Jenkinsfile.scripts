@@ -1,0 +1,47 @@
+import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
+
+def jira
+def gerrit
+def repo
+
+
+String agentLabel = "aws-dev-worker"
+String deployTarget = "DEV"
+if (env.GERRIT_EVENT_TYPE &&
+        env.GERRIT_EVENT_TYPE == "comment-added" || env.DEPLOY_TO_PROD == "true") {
+    deployTarget = "PROD"
+    agentLabel = "aws-prod-worker"
+}
+
+node("master") {
+    stage('Init') {
+        checkout scm
+        jira = load "scripts/jira.groovy"
+        gerrit = load "scripts/gerrit.groovy"
+        repo = load "scripts/repo.groovy"
+        jenkins = load "scripts/jenkins.groovy"
+        jira.checkJira()
+        echo "Jira check succeed, checking submit status"
+        gerrit.checkSubmitStatus(deployTarget)
+    }
+    stage("Build") {
+        gerrit.doCheckout();
+        gerrit.init();
+
+        ansiColor('xterm') {
+            echo "Doing nothinr"
+        }
+    }
+    stage("Deploy") {
+        echo "Nodhing to do here"
+    }
+    stage("Release") {
+        if (deployTarget == "PROD") {
+            gerrit.submitChange()
+            jira.close()
+            gerrit.maybePushToPublic()
+        } else {
+            Utils.markStageSkippedForConditional("Release")
+        }
+    }
+}
