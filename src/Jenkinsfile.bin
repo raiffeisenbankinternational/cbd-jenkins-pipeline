@@ -34,7 +34,8 @@ node(agentLabel) {
         ansiColor('xterm') {
             sh """
               set -ex
-              docker build --pull ${GLOBAL_PROPERTIES_DOCKER_BUILD_ARGS} \
+              docker build --network=host \
+                --pull ${GLOBAL_PROPERTIES_DOCKER_BUILD_ARGS} \
                 --build-arg APP_VERSION=1.0.b${BUILD_ID} \
                 --build-arg DEPLOY_TARGET="${deployTarget}" \
                 -t "${env.DOCKER_URL}/${DOCKER_ORG}/${JOB_BASE_NAME}:b${BUILD_ID}" .
