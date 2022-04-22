@@ -176,6 +176,7 @@ node(agentLabel) {
                     def devAccounts = config["devAccounts"]
                     print devAccounts
                     print devAccounts.size()
+                    
                     devAccounts.each { account ->
                         String accountOwner = account.owner
                         String accountName = account.name
@@ -192,7 +193,11 @@ node(agentLabel) {
                         echo "Is test job: " + (!testJob)
                         echo "Change owner or test job: " + (changeOwnerEmail == account.owner && !testJob)
                         stage(stageName) {
-                            if (env.DEPLOY_TO_FRIEND &&
+                            if (env.ROLLOUT_TO_ALL && deployedToProd) {
+                                AWS_ACCOUNT_ID = account.accountId
+                                ENVIRONMENT_NAME = account.environmentName
+                            }
+                            else if (env.DEPLOY_TO_FRIEND &&
                                     account.name == env.DEPLOY_TO_FRIEND) {
                                 AWS_ACCOUNT_ID = account.accountId
                                 ENVIRONMENT_NAME = account.environmentName
@@ -212,7 +217,7 @@ node(agentLabel) {
                                 ENVIRONMENT_NAME = account.environmentName
                             }
                             echo "Selected account: ${AWS_ACCOUNT_ID}"
-                            if (AWS_ACCOUNT_ID && !deployedToProd) {
+                            if (AWS_ACCOUNT_ID && (!deployedToProd || env.ROLLOUT_TO_ALL)) {
                                 jenkins.deploy(AWS_ACCOUNT_ID, ENVIRONMENT_NAME, deployTarget)
                                 deployed = true
                             } else {
