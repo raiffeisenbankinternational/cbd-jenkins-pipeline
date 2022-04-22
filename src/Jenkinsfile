@@ -192,8 +192,11 @@ node(agentLabel) {
                         echo "Change owner match: " + (changeOwnerEmail == account.owner)
                         echo "Is test job: " + (!testJob)
                         echo "Change owner or test job: " + (changeOwnerEmail == account.owner && !testJob)
+                        rolloutToAll = (env.ROLLOUT_TO_ALL && env.ROLLOUT_TO_ALL == "true")
+                        echo "Rollout to all: $rolloutToAll"
+
                         stage(stageName) {
-                            if (env.ROLLOUT_TO_ALL && deployedToProd) {
+                            if (rolloutToAll && deployedToProd) {
                                 AWS_ACCOUNT_ID = account.accountId
                                 ENVIRONMENT_NAME = account.environmentName
                             }
@@ -217,7 +220,7 @@ node(agentLabel) {
                                 ENVIRONMENT_NAME = account.environmentName
                             }
                             echo "Selected account: ${AWS_ACCOUNT_ID}"
-                            if (AWS_ACCOUNT_ID && (!deployedToProd || env.ROLLOUT_TO_ALL)) {
+                            if (AWS_ACCOUNT_ID && (!deployedToProd || rolloutToAll)) {
                                 jenkins.deploy(AWS_ACCOUNT_ID, ENVIRONMENT_NAME, deployTarget)
                                 deployed = true
                             } else {
