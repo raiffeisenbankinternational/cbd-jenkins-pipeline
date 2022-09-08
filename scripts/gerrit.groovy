@@ -106,7 +106,7 @@ def maybePushToPublic() {
          echo "Pushing to public \$last_commit_id"
          last_commit_id=\$(git log --format="%H" -n 1)
          git config credential.helper '!f() { sleep 1; echo "username=${GIT_USERNAME}"; echo "password=${GIT_PASSWORD}"; }; f'
-         git push ${env.PUBLIC_URL} \$last_commit_id:refs/heads/master
+         git push --force ${env.PUBLIC_URL} \$last_commit_id:refs/heads/master
      """)
      }
   }
