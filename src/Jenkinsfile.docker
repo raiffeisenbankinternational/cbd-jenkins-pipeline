@@ -46,6 +46,7 @@ node(agentLabel) {
             echo "Building \${i}"
             docker pull "${env.DOCKER_URL}/${DOCKER_ORG}/\${i#*.}:latest" || echo "Unable to pull"
             docker build ${GLOBAL_PROPERTIES_DOCKER_BUILD_ARGS} \
+              --cache-from "${env.DOCKER_URL}/${DOCKER_ORG}/\${i#*.}:latest" \
               -t "${env.DOCKER_URL}/${DOCKER_ORG}/\${i#*.}:local-build" \
               -t "${env.DOCKER_URL}/${DOCKER_ORG}/\${i#*.}:b${BUILD_ID}" -f \${i} .
           done
