@@ -69,7 +69,7 @@ def uploadJar(String fileName, deployTarget, String buildId) {
     if (deployTarget == "PROD") {
         if (env.PUBLIC_RELEASE && env.PUBLIC_RELEASE == "true") {
             repo = "${env.GLOBAL_REPOSITORY_PUBLIC_URL}";
-            repodId = "pub"
+            repodId = "clojars"
             credentials = "artifact-deploy-public-http"
             groupId = "${env.ARTIFACT_PUBLIC_ORG}";
         } else {
