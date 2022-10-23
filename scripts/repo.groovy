@@ -1,4 +1,4 @@
-def upload(String file, String pomFile, String artifactId, String groupId, String version, String repo, String credentials) {
+def upload(String file, String pomFile, String artifactId, String groupId, String version, String repo, String repoId, String credentials) {
     withCredentials([usernamePassword(credentialsId: credentials, usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
         ansiColor('xterm') {
             sh(label: "Upload file", script: """
@@ -15,7 +15,7 @@ def upload(String file, String pomFile, String artifactId, String groupId, Strin
                  -Dversion=\${VERSION} \
                  -Dpackaging=\${PACKAGING} \
                  -Dfile=\${FILE} \
-                 -DrepositoryId=artifacts \
+                 -DrepositoryId=${repoId} \
                  -DgeneratePom=false \
                  -DpomFile=${pomFile} \
                  -Dartifacts.username=\${USERNAME} -Dartifacts.password=\${PASSWORD} \
@@ -64,14 +64,17 @@ def uploadJar(String fileName, deployTarget, String buildId) {
     String artifactId = name.substring(0, name.lastIndexOf('-'));
     String groupId = env.ARTIFACT_DEV_ORG;
     String repo = "${env.GLOBAL_REPOSITORY_DEV_URL}";
+    String repoId = "dev"
     String credentials = "artifact-deploy-dev-http"
     if (deployTarget == "PROD") {
         if (env.PUBLIC_RELEASE && env.PUBLIC_RELEASE == "true") {
             repo = "${env.GLOBAL_REPOSITORY_PUBLIC_URL}";
+            repodId = "pub"
             credentials = "artifact-deploy-public-http"
             groupId = "${env.ARTIFACT_PUBLIC_ORG}";
         } else {
             repo = "${env.GLOBAL_REPOSITORY_PROD_URL}";
+            repoId = "prod"
             credentials = "artifact-deploy-http"
             groupId = "${env.ARTIFACT_ORG}";
         }
@@ -83,6 +86,7 @@ def uploadJar(String fileName, deployTarget, String buildId) {
             groupId,
             version,
             repo,
+            repoId,
             credentials)
 }
 
