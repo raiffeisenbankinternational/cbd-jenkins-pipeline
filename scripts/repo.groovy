@@ -1,6 +1,5 @@
 def upload(String file, String pomFile, String artifactId, String groupId, String version, String repo, String repoId, String credentials) {
-    withCredentials([usernamePassword(credentialsId: credentials, usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
-        ansiColor('xterm') {
+    ansiColor('xterm') {
             sh(label: "Upload file", script: """
                VERSION=${version}
                ARTIFACT_ID=${artifactId}
@@ -18,10 +17,8 @@ def upload(String file, String pomFile, String artifactId, String groupId, Strin
                  -DrepositoryId=${repoId} \
                  -DgeneratePom=false \
                  -DpomFile=${pomFile} \
-                 -Dartifacts.username=\${USERNAME} -Dartifacts.password=\${PASSWORD} \
                  -Durl=${repo}/
             """)
-        }
     }
 }
 
