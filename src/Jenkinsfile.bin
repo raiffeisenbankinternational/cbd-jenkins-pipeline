@@ -57,12 +57,16 @@ node(agentLabel) {
         String dockerBuildArgs = """--group-add 999
                                      -v /home/jenkins/.gitconfig:/home/build/.gitconfig 
                                      -v /home/jenkins/.gitcookie:/home/build/.gitcookie 
+                                     -v $MAVEN_SETTINGS:/home/build/.m2/settings.xml
                                      -v /var/run/docker.sock:/var/run/docker.sock"""
-        withDockerContainer(args: dockerBuildArgs,
+        configFileProvider([configFile(fileId: 'global-maven-settings', variable: 'MAVEN_SETTINGS')]) {
+
+          withDockerContainer(args: dockerBuildArgs,
                 image: dockerImageUrl) {
 
             repo.uploadLibs(deployTarget, true, env.BUILD_ID)
-       }
+          }
+        }
     }
     stage("Release") {
         if (deployTarget == "PROD") {
