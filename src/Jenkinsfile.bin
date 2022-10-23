@@ -54,12 +54,12 @@ node(agentLabel) {
     }
     stage("Deploy") {
         String dockerImageUrl = "${DOCKER_URL}/${DOCKER_ORG}/${JOB_BASE_NAME}:b${BUILD_ID}"
-        String dockerBuildArgs = """--group-add 999
+        configFileProvider([configFile(fileId: 'global-maven-settings', variable: 'MAVEN_SETTINGS')]) {
+          String dockerBuildArgs = """--group-add 999
                                      -v /home/jenkins/.gitconfig:/home/build/.gitconfig 
                                      -v /home/jenkins/.gitcookie:/home/build/.gitcookie 
                                      -v $MAVEN_SETTINGS:/home/build/.m2/settings.xml
                                      -v /var/run/docker.sock:/var/run/docker.sock"""
-        configFileProvider([configFile(fileId: 'global-maven-settings', variable: 'MAVEN_SETTINGS')]) {
 
           withDockerContainer(args: dockerBuildArgs,
                 image: dockerImageUrl) {
