@@ -1,7 +1,5 @@
 import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
 
-
-
 Boolean testJob = false
 String testTarget = ""
 
@@ -104,10 +102,11 @@ node(agentLabel) {
       sh 'pwd'
 
       unstash 'jenkinsfile-scripts'
-
-      withDockerContainer(args: """--group-add 999
+      configFileProvider([configFile(fileId: 'global-maven-settings', variable: 'MAVEN_SETTINGS')]) {
+        withDockerContainer(args: """--group-add 999
                                    --workdir="/home/build"
                                    -v /home/jenkins/.gitconfig:/home/build/.gitconfig
+                                   -v $MAVEN_SETTINGS:/home/build/.m2/settings.xml
                                    -v /home/jenkins/.gitcookie:/home/build/.gitcookie
                                    -v ${WORKSPACE}/ext:/dist/ext
                                    -v /var/run/docker.sock:/var/run/docker.sock""",
@@ -233,6 +232,7 @@ node(agentLabel) {
                     }
                 }
             }
+          }
         }
     }
     catch (Exception ex) {
