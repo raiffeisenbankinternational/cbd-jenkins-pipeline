@@ -29,10 +29,20 @@ node("master") {
     jira.checkJira()
     echo "Jira check succeed, checking submit status"
     gerrit.checkSubmitStatus(deployTarget)
+    
+    properties(
+      [
+        parameters([
+                string(defaultValue: '/data', name: 'Directory'),
+                string(defaultValue: 'Dev', name: 'DEPLOY_ENV')
+        ])   
+      ]
+    )  
 
     stash includes: 'scripts/*,ext/*', name: 'jenkinsfile-scripts'
   }
 }
+
 
 
 node(agentLabel) {
