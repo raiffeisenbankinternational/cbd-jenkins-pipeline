@@ -91,11 +91,11 @@ aws route53 list-hosted-zones \
 
 HOSTED_ZONE_ID=$(aws route53 list-hosted-zones \
             --query "HostedZones[*].[Id,Config.PrivateZone,Name]" \
-     --output text | grep "False" | awk '{printf $1}')
+     --output text | grep "False" | grep "${EnvironmentNameUpper,,}" | awk '{printf $1}')
 
 HOSTED_ZONE_NAME=$(aws route53 list-hosted-zones \
             --query "HostedZones[*].[Name,Config.PrivateZone,Name]" \
-     --output text | grep "False" | awk '{printf $1}')
+     --output text | grep "False" | grep "${EnvironmentNameUpper,,}" | awk '{printf $1}')
 
 
 aws ec2 describe-route-tables --query 'RouteTables[].{Name:Tags[?Key=='\''Name'\'']|[0].Value, Id:RouteTableId}' --output text
