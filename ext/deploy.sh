@@ -4,6 +4,19 @@ set -euxo pipefail
 
 echo "Started deploy.sh"
 
+while getopts “:r:t:” opt; do
+  case $opt in
+    r) ROLE=$OPTARG ;;
+    t) TAGS=$OPTARG ;;
+    *) echo "Usage: cmd [-r] [-t]"a && exit 1
+  esac
+done
+
+
+echo "Role ${ROLE:-}"
+echo "Tags ${TAGS:-}"
+
+
 ls -la /dist/ansible/deploy/roles
 
 cd /dist
@@ -194,6 +207,7 @@ export ANSIBLE_FORCE_COLOR=true
 ansible-playbook \
          -i $work_dir/inventory \
          --extra-vars "BuildId=${BUILD_ID}" \
+	 --tags "${TAGS:-untagged}" \
          -${ANSIBLE_LOG_LEVEL:-vvv} \
          ansible/deploy/deploy.yml
 

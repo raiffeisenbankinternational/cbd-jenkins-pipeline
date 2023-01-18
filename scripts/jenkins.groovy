@@ -64,7 +64,7 @@ def deploy(accountId, environmentNameUpper, deployTarget) {
                export BUILD_DOCKER_IMAGE="${env.DOCKER_URL}/${DOCKER_ORG}/${JOB_BASE_NAME}-runtime:b${BUILD_ID}"
             fi
 
-            /dist/ext/deploy.sh
+            /dist/ext/deploy.sh -t "untagged,\${DEPLOY_TARGET,,},\${ENVIRONMENT_NAME,,}"
            """)
     }
 }
