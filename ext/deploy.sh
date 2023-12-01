@@ -86,7 +86,7 @@ RESULT_SUBNET_CIDRS=$(for i in $SUBNET_CIDRS; do echo "\"${i##*-}Cidr\" : \"${i%
 echo "List hosted zones since this usally beaks the build"
 aws route53 list-hosted-zones \
 	--query 'HostedZones[*].[Name,Config.PrivateZone,Name]' \
-	--output textinventory
+	--output text
 
 HOSTED_ZONE_ID=$(aws route53 list-hosted-zones \
             --query "HostedZones[*].[Id,Config.PrivateZone,Name]" \
