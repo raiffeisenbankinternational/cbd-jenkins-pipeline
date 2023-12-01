@@ -20,7 +20,6 @@ echo "Tags ${TAGS:-}"
 ls -la /dist/ansible/deploy/roles
 
 cd /dist
-export HOME=/dist
 
 echo "Checking current user"
 id
@@ -203,6 +202,10 @@ echo '{ "params" : '${params}',
 
 echo "Executing ansible deployment"
 export ANSIBLE_FORCE_COLOR=true
+
+echo "START Inventory"
+$work_dir/inventory
+echo "END Inventory"
 
 ansible-playbook \
          -i $work_dir/inventory \
