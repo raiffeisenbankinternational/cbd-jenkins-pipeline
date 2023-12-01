@@ -201,11 +201,19 @@ echo '{ "params" : '${params}',
 
 
 echo "Executing ansible deployment"
+
 export ANSIBLE_FORCE_COLOR=true
 
-echo "START Inventory"
-ls -la $work_dir/inventory
-echo "END Inventory"
+echo "localhost" > "$work_dir/inventory"
+cp /etc/ansible/ansible.cfg ./ansible.cfg
+
+echo "callbacks_enabled = profile_tasks" >> ./ansible.cfg
+ANSIBLE_CONFIG="$(pwd)/ansible.cfg"
+export ANSIBLE_CONFIG
+
+echo "### <ansible-config> ###"""
+cat $ANSIBLE_CONFIG
+echo "### </ansible-config> ###"""
 
 ansible-playbook \
          -i $work_dir/inventory \
