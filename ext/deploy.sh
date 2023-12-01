@@ -28,7 +28,7 @@ echo "Docker socket permissions"
 ls -la /var/run/docker.sock
 
 echo "Prepare request directory"
-export work_dir="${BUILD_ID}"
+export work_dir="/dist/${BUILD_ID}"
 mkdir -p $work_dir
 
 echo "We are running inside ${work_dir}"
@@ -212,5 +212,5 @@ ansible-playbook \
          --extra-vars "BuildId=${BUILD_ID}" \
 	 --tags "${TAGS:-untagged}" \
          -${ANSIBLE_LOG_LEVEL:-vvv} \
-         ansible/deploy/deploy.yml
+         $HOME/ansible/deploy/deploy.yml
 
