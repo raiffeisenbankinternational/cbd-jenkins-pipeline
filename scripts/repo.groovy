@@ -49,6 +49,8 @@ def uploadJar(String fileName, deployTarget, String buildId) {
     echo "Uploading file $file"
 
     String name = file.substring(0, file.lastIndexOf('.'));
+    echo "Name: $name"
+
     String version = fileName.substring(fileName.lastIndexOf('-') + 1);
     echo "Part version $version"
     version = (version =~ /(^[\d\.b]+)[\.]+/).findAll()[0][1]
