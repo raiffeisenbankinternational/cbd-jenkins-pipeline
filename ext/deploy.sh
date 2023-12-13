@@ -217,6 +217,7 @@ echo "### </ansible-config> ###"""
 
 ansible-playbook \
          -i $work_dir/inventory \
+	 --connection=local \
          --extra-vars "BuildId=${BUILD_ID}" \
 	 --tags "${TAGS:-untagged}" \
          -${ANSIBLE_LOG_LEVEL:-vvv} \
