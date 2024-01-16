@@ -108,6 +108,7 @@ node(agentLabel) {
                                    -v /home/jenkins/.gitconfig:/home/build/.gitconfig
                                    -v $MAVEN_SETTINGS:/home/build/.m2/settings.xml
                                    -v /home/jenkins/.gitcookie:/home/build/.gitcookie
+                                   -v #PWD/ext/deploy.sh/
                                    -v ${WORKSPACE}/ext:/dist/ext
                                    -v /var/run/docker.sock:/var/run/docker.sock""",
                 image: dockerImage) {
