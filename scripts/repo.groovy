@@ -8,7 +8,7 @@ def upload(String file, String pomFile, String artifactId, String groupId, Strin
                ARTIFACT_NAME=\$(basename \${FILE})
                PACKAGING=\${ARTIFACT_NAME##*.}
                echo "Adding licence information: "
-               sed -i 's/<\\/project>/<license><name>Apache-2.0<\\/name><url>https:\\/\\/www.apache.org\\/licenses\\/LICENSE-2.0.txt<\\/url><\\/license><\\/project>/g' ${pomFile}
+               sed -i 's/<\\/project>/<licenses><license><name>Apache-2.0<\\/name><url>https:\\/\\/www.apache.org\\/licenses\\/LICENSE-2.0.txt<\\/url><\\/license><\\/licenses><\\/project>/g' ${pomFile}
                cat ${pomFile}
                echo "Deploying: \${GROUP_ID}:\${ARTIFACT_ID} on file \${FILE} packaged as \${PACKAGING}  with version: \${VERSION}"
                mvn deploy:deploy-file \
