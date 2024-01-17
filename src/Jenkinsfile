@@ -194,30 +194,37 @@ node(agentLabel) {
                         echo "Change owner or test job: " + (changeOwnerEmail == account.owner && !testJob)
                         rolloutToAll = (env.ROLLOUT_TO_ALL && env.ROLLOUT_TO_ALL == "true")
                         echo "Rollout to all: $rolloutToAll"
+                        echo "Deployd to prod: $deployedToProd"
 
                         stage(stageName) {
                             if (rolloutToAll && deployedToProd) {
                                 AWS_ACCOUNT_ID = account.accountId
                                 ENVIRONMENT_NAME = account.environmentName
+                                echo "Selected by rolloutToAll"
                             }
                             else if (env.DEPLOY_TO_FRIEND &&
                                     account.name == env.DEPLOY_TO_FRIEND) {
                                 AWS_ACCOUNT_ID = account.accountId
                                 ENVIRONMENT_NAME = account.environmentName
+                                echo "Selected by deployint to friend"
                             } else if (env.BUILD_USER_EMAIL &&
                                     account.owner == env.BUILD_USER_EMAIL &&
                                     env.DEPLOY_TO_FRIEND == "") {
                                 AWS_ACCOUNT_ID = account.accountId
                                 ENVIRONMENT_NAME = account.environmentName
+                                echo "Selected by user starting a build"
                             } else if (changeOwnerEmail == account.owner && !testJob) {
                                 AWS_ACCOUNT_ID = account.accountId
                                 ENVIRONMENT_NAME = account.environmentName
+                                echo "Selected by owner of change"
                             } else if (env.DEPLOY_ALL_DEV == "true") {
                                 AWS_ACCOUNT_ID = account.accountId
                                 ENVIRONMENT_NAME = account.environmentName
+                                echo "Selected by deploy to all dev" 
                             } else if (testJob && account.environmentName == testTarget) {
                                 AWS_ACCOUNT_ID = account.accountId
                                 ENVIRONMENT_NAME = account.environmentName
+                                echo "Selected forced environment" 
                             }
                             echo "Selected account: ${AWS_ACCOUNT_ID}"
                             if (AWS_ACCOUNT_ID && (!deployedToProd || rolloutToAll)) {
