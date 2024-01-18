@@ -136,7 +136,6 @@ node(agentLabel) {
                                 jenkins.runTests(testAccount, "TEST01", deployTarget)
                             }
                             deployed = true
-                            deployedToProd = true
                         } else {
                             Utils.markStageSkippedForConditional(testStageName)
                         }
