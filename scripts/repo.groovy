@@ -7,7 +7,7 @@ def upload(String file, String pomFile, String artifactId, String groupId, Strin
                FILE=${file}
                ARTIFACT_NAME=\$(basename \${FILE})
                PACKAGING=\${ARTIFACT_NAME##*.}
-               if grep -q "licences" ${pomFile}; then
+               if grep -q "licenses" ${pomFile}; then
                  echo "File '${pomFile}' contains the word 'licences'"
                else
                  echo "Adding licence information: "
