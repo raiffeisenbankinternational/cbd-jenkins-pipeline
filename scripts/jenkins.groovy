@@ -16,7 +16,9 @@ def parseJson(jsonString) {
 def readConfig() {
     String config = sh(label: "Reading config from s3 bucket", returnStdout: true, script: """#!/bin/bash
            set -e
-           export AWS_DEFAULT_REGION=\$(curl --silent http://169.254.169.254/latest/dynamic/instance-identity/document | jq -r .region)
+           
+           SESSION_TOKEN=\$(curl -s -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600") &&\\
+           export AWS_DEFAULT_REGION=\$(curl -s -H "X-aws-ec2-metadata-token: $SESSION_TOKEN" http://169.254.169.254/latest/dynamic/instance-identity/document | jq -r .region) &&\\
            aws s3 cp --region "\${AWS_DEFAULT_REGION}" ${env.CONFIG_FILE_URL} -
            """)
     return parseJson(config)
