@@ -8,10 +8,10 @@ def checkJira() {
     }
 
     String gerritMessage = sh(label: 'Check gerrit commit message', returnStdout: true, script: """#!/bin/bash
-       curl -b ~/.gitcookie --fail -v \
-                       https://${GERRIT_URL}/a/changes/${GERRIT_CHANGE_ID}/revisions/${GERRIT_PATCHSET_REVISION}/commit \
-                       | tail +2 \
-                       | jq -r ".message"
+       output=\$(mktemp)
+       target_url="https://${GERRIT_URL}/a/changes/${GERRIT_CHANGE_ID}/revisions/${GERRIT_PATCHSET_REVISION}/commit" 
+       curl -b ~/.gitcookie --fail -v \$target_url -o \$output       
+       tail -n +2 \$output | jq -r ".message"
        """)
     echo "Commit message ${gerritMessage}"
     JIRA_STATUS = sh(label: 'Check related Jira issue', returnStdout: true, script: """#!/bin/bash

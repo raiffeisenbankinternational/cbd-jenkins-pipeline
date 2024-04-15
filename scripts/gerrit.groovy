@@ -38,7 +38,7 @@ def checkSubmitStatus(deployTarget) {
             fi
             SUBMITTABLE=\$(curl -b ~/.gitcookie --fail -s \
                                              https://${GERRIT_URL}/a/changes/${GERRIT_CHANGE_ID}/revisions/${GERRIT_PATCHSET_REVISION}/actions \
-                                                | tail +2 \\
+                                                | tail -n +2 \\
                                                 | jq -r '.submit.label')
             if [ "\${SUBMITTABLE}" != "Submit" ] ; then
                 echo "ERROR: Change is not ready to submit!"

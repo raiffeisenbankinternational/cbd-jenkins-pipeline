@@ -41,7 +41,13 @@ node(agentLabel) {
               exit 1
             fi
           fi
-          
+
+          echo "Checking permissions, me: "
+          id
+          echo "docker: "
+          ls -la /var/run/docker.sock
+          echo "done"
+
           for i in \$(ls *-Dockerfile.* | sort); do 
             echo "Building \${i}"
             docker build ${GLOBAL_PROPERTIES_DOCKER_BUILD_ARGS} \
