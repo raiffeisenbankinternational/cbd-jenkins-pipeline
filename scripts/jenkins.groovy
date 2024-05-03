@@ -1,9 +1,10 @@
 import com.cloudbees.groovy.cps.NonCPS
 import groovy.json.JsonSlurperClassic
 
+
 @NonCPS
 static
-def parseJson(jsonString) {
+Map<?, ?> parseJson(String jsonString) {
     // Would like to use readJSON step, but it requires a context, even for parsing just text.
     Map<?, ?> lazyMap = (Map<?, ?>) new JsonSlurperClassic().parseText(jsonString)
 
@@ -13,7 +14,7 @@ def parseJson(jsonString) {
     return m
 }
 
-def readConfig() {
+Map<?, ?> readConfig() {
     String config = sh(label: "Reading config from s3 bucket", returnStdout: true, script: """#!/bin/bash
            set -e
            
