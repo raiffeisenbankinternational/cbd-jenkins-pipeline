@@ -16,25 +16,36 @@ repositories {
     maven {
         url "https://repo.jenkins-ci.org/incrementals/"
     }
+    maven {
+        url 'https://repo.jenkins-ci.org/public/'
+    }
 }
 
 dependencies {
 
-    compile 'org.codehaus.groovy:groovy-all:2.3.11'
-
-    compile group: 'org.jenkins-ci.main', name: 'jenkins-core', version: '2.250', ext: 'jar'
-    compile group: 'com.cloudbees', name: 'groovy-cps', version: '1.31'
-
-    compile group: 'org.jenkinsci.plugins', name: 'pipeline-model-definition', version: '1.7.1', ext: 'jar'
+    implementation platform('io.jenkins.tools.bom:bom-2.440.x:2884.vc36b_64ce114a_')
+    implementation platform('org.jenkins-ci.main:jenkins-bom:2.440.1')
 
 
+    implementation 'org.codehaus.groovy:groovy-all'
+
+    implementation 'org.jenkins-ci.main:jenkins-core:2.440.1'
+
+    implementation 'com.cloudbees:groovy-cps'
+
+    implementation 'org.jenkinsci.plugins:pipeline-model-definition:1.7.1'
+
+    implementation 'org.jenkins-ci.plugins.workflow:workflow-api@jar'
+    implementation 'org.jenkins-ci.plugins.workflow:workflow-api'
+
+    implementation 'org.jenkins-ci.plugins.workflow:workflow-job@jar'
+    implementation 'org.jenkins-ci.plugins.workflow:workflow-job'
     // Jenkins plugins
-    compile group: 'org.jenkins-ci.plugins', name: 'credentials', version: '2.1.13', ext: 'jar'
-    compile group: 'org.jenkins-ci.plugins', name: 'matrix-auth', version: '1.6', ext: 'jar'
-    compile group: 'org.jenkins-ci.plugins.workflow', name: 'workflow-cps', version: '2.39', ext: 'jar'
-    compile group: 'org.jenkins-ci.plugins.workflow', name: 'workflow-job', version: '2.39', ext: 'jar'
-    compile group: 'org.jenkins-ci.plugins.workflow', name: 'workflow-api', version: '2.40', ext: 'jar'
+    implementation 'org.jenkins-ci.plugins:credentials:2.1.13'
+    implementation 'org.jenkins-ci.plugins:matrix-auth:1.6'
+    implementation 'org.jenkins-ci.plugins.workflow:workflow-cps:2.39'
 
+    compileOnly 'jakarta.servlet:jakarta.servlet-api:4.0.4'
 
 }
 
