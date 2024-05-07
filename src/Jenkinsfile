@@ -24,7 +24,7 @@ node("master") {
         echo "Running setup"
         load "scripts/params.groovy"
     } else {
-        jira = load "/scripts/jira.groovy"
+        jira = load "scripts/jira.groovy"
         gerrit = load "scripts/gerrit.groovy"
         repo = load "scripts/repo.groovy"
         jenkins = load "scripts/jenkins.groovy"
