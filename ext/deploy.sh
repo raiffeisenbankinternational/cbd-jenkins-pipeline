@@ -102,7 +102,7 @@ aws route53 list-hosted-zones \
 	--output text
 
 hosted_zone_filter="alpha-prosoft*"
-if [[ ! -z "$(cat /tmp/config.json | jq -r '.builder.hostedZoneFilter // empty')" ]]; then 
+if [[ ! -z "$(cat /tmp/config.json | jq -r '.deployer.hostedZoneFilter // empty')" ]]; then 
    hosted_zone_filter="$(cat /tmp/config.json | jq -r '.builder.hostedZoneFilter')"
 fi
 
