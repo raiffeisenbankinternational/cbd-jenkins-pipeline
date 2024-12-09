@@ -70,6 +70,9 @@ aws ssm get-parameter \
        --query 'Parameter.Value' \
        --output text > /tmp/config.json || echo "No config"
 
+echo "#### Final config: "
+cat /tmp/config.json
+echo "###################"
 
 echo "Fetching VPC CIDR"
 VPC_ID=$(aws ec2 describe-vpcs \
@@ -102,6 +105,7 @@ aws route53 list-hosted-zones \
 	--output text
 
 hosted_zone_filter="alpha-prosoft*"
+echo "Hosted zone filter: ${hosted_zone_filter}"
 if [[ ! -z "$(cat /tmp/config.json | jq -r '.deployer.hostedZoneFilter // empty')" ]]; then 
    hosted_zone_filter="$(cat /tmp/config.json | jq -r '.builder.hostedZoneFilter')"
 fi
