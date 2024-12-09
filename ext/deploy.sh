@@ -236,7 +236,7 @@ with open(out_file) as out:
 with open(config_file) as config: 
   params = json.load(config)
   
-if "deployer" in prams and "paramsSubstitutions" in params["deployer"]:
+if "deployer" in params and "paramsSubstitutions" in params["deployer"]:
   with open(out_file, "w") as out:
     substitutions = params["deployer"]["paramsSubstitutions"]
     new_data = {}
