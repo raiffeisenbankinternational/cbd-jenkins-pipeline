@@ -230,7 +230,7 @@ config_file=sys.argv[1]
 out_file=sys.argv[2]
 
 
-with open(out_file) :as out:
+with open(out_file) as out:
   data = json.load(out)
 
 with open(config_file) as config, open(out_file, "w") as out:
