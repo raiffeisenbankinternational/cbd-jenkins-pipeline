@@ -221,6 +221,32 @@ echo '{ "params" : '${params}',
         "pipeline_params" : '${pipeline_access}', 
         "resource_tags" : {} }' > $work_dir/group_vars/all.json
 
+correction_script=$(mktemp)
+cat > ${correction_script} <<EOF
+import sys 
+import json
+
+config_file=sys.argv[1]
+out_file=sys.argv[2]
+
+
+with open(out_file) :as out:
+  data = json.load(out)
+
+with open(config_file) as config, open(out_file, "w") as out:
+  params = json.load(config)
+  substitutions = params["deployer"]["paramsSubstitutions"]
+  new_data = {}
+  for key, value in data.items():
+    if key in substitutions:
+      new_key = substitutions[key]
+      new_data[new_key] = value
+    else:
+      new_data[key] = value        
+  json.dump(new_data, out)
+EOF
+
+python3 ${correction_script} /tmp/config.json $work_dir/group_vars/all.json 
 
 echo "Executing ansible deployment"
 
