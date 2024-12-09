@@ -242,6 +242,6 @@ ansible-playbook \
 	 --connection=local \
          --extra-vars "BuildId=${BUILD_ID}" \
 	 --tags "${TAGS:-untagged}" \
-         -${ANSIBLE_LOG_LEVEL:-vvv} \
+         ${ANSIBLE_LOG_LEVEL:-vvv} \
          $HOME/ansible/deploy/deploy.yml
 
