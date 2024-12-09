@@ -13,6 +13,7 @@ while getopts “:r:t:” opt; do
 done
 
 
+
 echo "Role ${ROLE:-}"
 echo "Tags ${TAGS:-}"
 
@@ -47,7 +48,11 @@ SESSION=$(aws sts assume-role \
             --region ${AWS_DEFAULT_REGION})
 
 CURRENT_ROLE=$(curl http://169.254.169.254/latest/meta-data/iam/security-credentials)
-curl -o security-credentials.json http://169.254.169.254/latest/meta-data/iam/security-credentials/${CURRENT_ROLE}/
+SESSION_TOKEN=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
+CURRENT_ROLE=$(curl -H "X-aws-ec2-metadata-token: $SESSION_TOKEN" http://169.254.169.254/latest/meta-data/iam/security-credentials/)
+curl -o security-credentials.json -H "X-aws-ec2-metadata-token: $SESSION_TOKEN" \
+          http://169.254.169.254/latest/meta-data/iam/security-credentials/${CURRENT_ROLE}/
+
 
 export PIPELINE_AWS_ACCESS_KEY_ID=$(cat security-credentials.json | jq -r '.AccessKeyId')
 export PIPELINE_AWS_SECRET_ACCESS_KEY=$(cat security-credentials.json | jq -r '.SecretAccessKey')
@@ -57,6 +62,14 @@ export PIPELINE_ACCOUNT_ID=$(curl -s http://169.254.169.254/latest/dynamic/insta
 export AWS_ACCESS_KEY_ID=$(echo $SESSION | jq -r '.Credentials.AccessKeyId')
 export AWS_SECRET_ACCESS_KEY=$(echo $SESSION | jq -r '.Credentials.SecretAccessKey')
 export AWS_SESSION_TOKEN=$(echo $SESSION | jq -r '.Credentials.SessionToken')
+
+echo "{}" > /tmp/config.json
+aws ssm get-parameter \
+       --name "/install/config" \
+       --with-decryption \
+       --query 'Parameter.Value' \
+       --output text > /tmp/config.json || echo "No config"
+
 
 echo "Fetching VPC CIDR"
 VPC_ID=$(aws ec2 describe-vpcs \
@@ -88,13 +101,18 @@ aws route53 list-hosted-zones \
 	--query 'HostedZones[*].[Name,Config.PrivateZone,Name]' \
 	--output text
 
+hosted_zone_filter="alpha-prosoft*"
+if [[ ! -z "$(cat /tmp/config.json | jq -r '.builder.hostedZoneFilter // empty')" ]]; then 
+   hosted_zone_filter="$(cat /tmp/config.json | jq -r '.builder.hostedZoneFilter')"
+fi
+
 HOSTED_ZONE_ID=$(aws route53 list-hosted-zones \
             --query "HostedZones[*].[Id,Config.PrivateZone,Name]" \
-     --output text | grep "False" | grep "alpha-prosoft" | awk '{printf $1}')
+     --output text | grep "False" | grep "${hosted_zone_filter}" | awk '{printf $1}')
 
 HOSTED_ZONE_NAME=$(aws route53 list-hosted-zones \
             --query "HostedZones[*].[Name,Config.PrivateZone,Name]" \
-     --output text | grep "False" | grep "alpha-prosoft" | awk '{printf $1}')
+     --output text | grep "False" | grep "${hosted_zone_filter}" | awk '{printf $1}')
 
 
 aws ec2 describe-route-tables --query 'RouteTables[].{Name:Tags[?Key=='\''Name'\'']|[0].Value, Id:RouteTableId}' --output text
