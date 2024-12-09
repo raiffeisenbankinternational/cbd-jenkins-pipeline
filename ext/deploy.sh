@@ -233,17 +233,20 @@ out_file=sys.argv[2]
 with open(out_file) as out:
   data = json.load(out)
 
-with open(config_file) as config, open(out_file, "w") as out:
+with open(config_file) as config: 
   params = json.load(config)
-  substitutions = params["deployer"]["paramsSubstitutions"]
-  new_data = {}
-  for key, value in data.items():
-    if key in substitutions:
-      new_key = substitutions[key]
-      new_data[new_key] = value
-    else:
-      new_data[key] = value        
-  json.dump(new_data, out)
+  
+if "deployer" in prams and "paramsSubstitutions" in params["deployer"]:
+  with open(out_file, "w") as out:
+    substitutions = params["deployer"]["paramsSubstitutions"]
+    new_data = {}
+    for key, value in data.items():
+      if key in substitutions:
+        new_key = substitutions[key]
+        new_data[new_key] = value
+      else:
+        new_data[key] = value        
+    json.dump(new_data, out)
 EOF
 
 python3 ${correction_script} /tmp/config.json $work_dir/group_vars/all.json 
