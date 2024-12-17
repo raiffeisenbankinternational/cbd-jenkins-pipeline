@@ -76,14 +76,14 @@ echo "###################"
 
 echo "Fetching VPC CIDR"
 VPC_ID=$(aws ec2 describe-vpcs \
-	   --query "Vpcs[*].VpcId" \
-	   --filter "Name=tag:Name,Values=aws-controltower-*" \
-	   --output text)
+           --query "Vpcs[*].VpcId" \
+           --filter "Name=tag:Name,Values=aws-controltower-*" \
+           --output text)
 
 VPC_CIDR=$(aws ec2 describe-vpcs \
-	     --query "Vpcs[*].CidrBlock" \
-	     --filter "Name=tag:Name,Values=aws-controltower-*"  \
-	     --output text)
+             --query "Vpcs[*].CidrBlock" \
+             --filter "Name=tag:Name,Values=aws-controltower-*"  \
+             --output text)
 
 
 echo "Fetching subnets"
@@ -101,8 +101,8 @@ RESULT_SUBNET_CIDRS=$(for i in $SUBNET_CIDRS; do echo "\"${i##*-}Cidr\" : \"${i%
 
 echo "List hosted zones since this usally beaks the build"
 aws route53 list-hosted-zones \
-	--query 'HostedZones[*].[Name,Config.PrivateZone,Name]' \
-	--output text
+        --query 'HostedZones[*].[Name,Config.PrivateZone,Name]' \
+        --output text
 
 hosted_zone_filter="alpha-prosoft*"
 echo "Hosted zone filter: ${hosted_zone_filter}"
@@ -186,7 +186,7 @@ pipeline_access=$(cat /dist/artifacts.json | \
           "AWS_SESSION_TOKEN" : "'${PIPELINE_AWS_SESSION_TOKEN}'",
           "AWS_SECRET_ACCESS_KEY" : "'${PIPELINE_AWS_SECRET_ACCESS_KEY}'",
           "AWS_DEFAULT_REGION" : "'${AWS_DEFAULT_REGION}'",
-	  "AccountId" : "'${PIPELINE_ACCOUNT_ID}'",
+          "AccountId" : "'${PIPELINE_ACCOUNT_ID}'",
           "ServiceName" : "'${ServiceName}'"
           }')
 
@@ -200,8 +200,8 @@ params=$(echo "${target_access}" | \
           '"${RESULT_SUBNETS}"'
           '"${RESULT_SUBNET_CIDRS}"'
           '"${RESULT_ROUTE_TABLES}"'
-	  "AccountId" : "'${TargetAccountId}'",
-	  "Priority" : "'${priority}'",
+          "AccountId" : "'${TargetAccountId}'",
+          "Priority" : "'${priority}'",
           "PrivateHostedZoneName" : "'${HOSTED_ZONE_NAME%.*}'",
           "PrivateHostedZoneId" : "'${HOSTED_ZONE_ID##*/}'",
           "PublicHostedZoneName" : "'${HOSTED_ZONE_NAME%.*}'",
@@ -246,7 +246,7 @@ if "deployer" in params and "paramsSubstitutions" in params["deployer"]:
     for key, value in data.items():
       if key in substitutions:
         new_key = substitutions[key]
-	print(f"Substituting: {key} for {new_key}")
+        print(f"Substituting: {key} for {new_key}")
         new_data[new_key] = value
       else:
         new_data[key] = value        
@@ -276,9 +276,9 @@ echo "### </ansible-config> ###"""
 
 ansible-playbook \
          -i $work_dir/inventory \
-	 --connection=local \
+         --connection=local \
          --extra-vars "BuildId=${BUILD_ID}" \
-	 --tags "${TAGS:-untagged}" \
+         --tags "${TAGS:-untagged}" \
          ${ANSIBLE_LOG_LEVEL:-vvv} \
          $HOME/ansible/deploy/deploy.yml
 
