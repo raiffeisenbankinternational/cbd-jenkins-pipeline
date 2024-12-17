@@ -213,7 +213,7 @@ params=$(echo "${target_access}" | \
           '"${RESULT_SUBNET_CIDRS}"'
           '"${RESULT_ROUTE_TABLES}"'
           "AccountId" : "'${TargetAccountId}'",
-	  "LoadBalancerScheme": "'${load_balancer_scheme}'"
+	  "LoadBalancerScheme": "'${load_balancer_scheme}'",
           "Priority" : "'${priority}'",
           "PrivateHostedZoneName" : "'${HOSTED_ZONE_NAME%.*}'",
           "PrivateHostedZoneId" : "'${HOSTED_ZONE_ID##*/}'",
