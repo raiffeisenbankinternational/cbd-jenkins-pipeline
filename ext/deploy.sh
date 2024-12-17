@@ -197,6 +197,12 @@ pipeline_access=$(cat /dist/artifacts.json | \
           }')
 
 
+load_balancer_scheme="internet-facing"
+echo "Hosted zone filter: ${hosted_zone_filter}"
+if [[ ! -z "$(cat /tmp/config.json | jq -r '.deployer.scheme // empty')" ]]; then 
+   load_balancer_scheme="$(cat /tmp/config.json | jq -r '.deployer.scheme')"
+fi
+
 params=$(echo "${target_access}" | \
  jq '. + {"BuildId" : "'${BUILD_ID}'",
           "Version" : "'${BUILD_ID}'",
@@ -207,6 +213,7 @@ params=$(echo "${target_access}" | \
           '"${RESULT_SUBNET_CIDRS}"'
           '"${RESULT_ROUTE_TABLES}"'
           "AccountId" : "'${TargetAccountId}'",
+	  "LoadBalancerScheme": "'${load_balancer_scheme}'"
           "Priority" : "'${priority}'",
           "PrivateHostedZoneName" : "'${HOSTED_ZONE_NAME%.*}'",
           "PrivateHostedZoneId" : "'${HOSTED_ZONE_ID##*/}'",
