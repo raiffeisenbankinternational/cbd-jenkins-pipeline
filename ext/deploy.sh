@@ -37,18 +37,19 @@ echo "We are running inside ${work_dir}"
 echo "Setting up ansible directories"
 mkdir -p $work_dir/group_vars
 
-region=eu-west-1
-export AWS_DEFAULT_REGION=${region}
+SESSION_TOKEN=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
+
+export AWS_DEFAULT_REGION=$(curl -s -H "X-aws-ec2-metadata-token: $SESSION_TOKEN" \
+                               http://169.254.169.254/latest/dynamic/instance-identity/document \
+	                             | jq -r .region)
 
 echo "Assuming role in target account"
 SESSION=$(aws sts assume-role \
             --role-arn arn:aws:iam::${TargetAccountId}:role/PipelineRole \
             --role-session-name "${ServiceName}-deployment-${BUILD_ID}" \
-            --endpoint https://sts.${region}.amazonaws.com \
+            --endpoint https://sts.${AWS_DEFAULT_REGION}.amazonaws.com \
             --region ${AWS_DEFAULT_REGION})
 
-CURRENT_ROLE=$(curl http://169.254.169.254/latest/meta-data/iam/security-credentials)
-SESSION_TOKEN=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
 CURRENT_ROLE=$(curl -H "X-aws-ec2-metadata-token: $SESSION_TOKEN" http://169.254.169.254/latest/meta-data/iam/security-credentials/)
 curl -o security-credentials.json -H "X-aws-ec2-metadata-token: $SESSION_TOKEN" \
           http://169.254.169.254/latest/meta-data/iam/security-credentials/${CURRENT_ROLE}/
