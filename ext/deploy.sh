@@ -70,7 +70,7 @@ aws ssm get-parameter \
        --query 'Parameter.Value' \
        --output text > /tmp/config.json || echo "No config"
 
-echo "#### Final config: "
+echo "#### Deployment config: "
 cat /tmp/config.json
 echo "###################"
 
@@ -232,7 +232,9 @@ out_file=sys.argv[2]
 
 
 with open(out_file) as out:
-  data = json.load(out)
+  group_vars = json.load(out)
+  data = group_vars["params"]
+  
 
 with open(config_file) as config: 
   params = json.load(config)
@@ -241,23 +243,26 @@ print("Checking for config")
 if "deployer" in params and "paramsSubstitutions" in params["deployer"]:
   print("Found deployment config")
   with open(out_file, "w") as out:
-    substitutions = params["deployer"]["paramsSubstitutions"]
-    new_data = {}
-    for key, value in data.items():
-      if key in substitutions:
-        new_key = substitutions[key]
-        print(f"Substituting: {key} for {new_key}")
-        new_data[new_key] = value
-      else:
-        new_data[key] = value        
-    json.dump(new_data, out)
+    if "paramsSubstitutions" in params["deployer"]:
+      print("Found substitutions")
+      substitutions = params["deployer"]["paramsSubstitutions"]
+      new_data = {}
+      for key, value in data.items():
+        if key in substitutions:
+          new_key = substitutions[key]
+          print(f"Substituting: {key} for {new_key}")
+          new_data[new_key] = value
+        else:
+          new_data[key] = value  
+      group_vars["params"] = new_data
+      json.dump(group_vars, out)
 EOF
 
 python3 ${correction_script} /tmp/config.json $work_dir/group_vars/all.json 
 
-echo "############## Final Config #############" 
-cat $work_dir/group_vars/all.json
-echo "#########################################"
+echo "#### Final params in group_vars/all.json #############" 
+cat $work_dir/group_vars/all.json | jq
+echo "######################################################"
 
 echo "Executing ansible deployment"
 
