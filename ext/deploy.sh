@@ -261,7 +261,7 @@ EOF
 python3 ${correction_script} /tmp/config.json $work_dir/group_vars/all.json 
 
 echo "#### Final params in group_vars/all.json #############" 
-cat $work_dir/group_vars/all.json | jq
+jq '.' $work_dir/group_vars/all.json
 echo "######################################################"
 
 echo "Executing ansible deployment"
