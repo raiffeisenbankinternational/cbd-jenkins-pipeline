@@ -75,15 +75,20 @@ echo "#### Deployment config: "
 cat /tmp/config.json
 echo "###################"
 
-echo "Fetching VPC CIDR"
+
+vpc_filter="aws-controltower-"
+if [[ ! -z "$(cat /tmp/config.json | jq -r '.deployer."vpc-filter" // empty')" ]]; then 
+   vpc_filter="$(cat /tmp/config.json | jq -r '.deployer."vpc-filter"')"
+fi
+echo "Fetching VPC data using filter: ${vpc_filter}"
 VPC_ID=$(aws ec2 describe-vpcs \
            --query "Vpcs[*].VpcId" \
-           --filter "Name=tag:Name,Values=aws-controltower-*" \
+           --filter "Name=tag:Name,Values=${vpc_filter}*" \
            --output text)
 
 VPC_CIDR=$(aws ec2 describe-vpcs \
              --query "Vpcs[*].CidrBlock" \
-             --filter "Name=tag:Name,Values=aws-controltower-*"  \
+             --filter "Name=tag:Name,Values=${vpc_filter}*"  \
              --output text)
 
 
