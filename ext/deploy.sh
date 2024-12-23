@@ -45,7 +45,7 @@ export AWS_DEFAULT_REGION=$(curl -s -H "X-aws-ec2-metadata-token: $SESSION_TOKEN
 
 echo "Assuming role in target account"
 SESSION=$(aws sts assume-role \
-            --role-arn arn:aws:iam::${TargetAccountId}:role/PipelineRole \
+            --role-arn arn:aws:iam::${TargetAccountId}:role/DeliveryRole \
             --role-session-name "${ServiceName}-deployment-${BUILD_ID}" \
             --endpoint https://sts.${AWS_DEFAULT_REGION}.amazonaws.com \
             --region ${AWS_DEFAULT_REGION})
