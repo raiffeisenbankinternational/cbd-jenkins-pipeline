@@ -36,7 +36,7 @@ export LATEST_IMAGE="$(aws ec2 describe-images \
 echo "Last image found: $LATEST_IMAGE"
 
 if [[ "$LATEST_IMAGE" == "" ]]; then
-  export BUILD_ID="0"
+  export BUILD_ID="1000"
 else
   export BUILD_ID="${LATEST_IMAGE##*.b}"
 fi
