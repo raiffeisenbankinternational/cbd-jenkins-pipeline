@@ -116,11 +116,19 @@ if [[ ! -z "$(cat /tmp/config.json | jq -r '.deployer.hostedZoneFilter // empty'
    hosted_zone_filter="$(cat /tmp/config.json | jq -r '.deployer.hostedZoneFilter')"
 fi
 
-HOSTED_ZONE_ID=$(aws route53 list-hosted-zones \
+PRIVATE_HOSTED_ZONE_ID=$(aws route53 list-hosted-zones \
+            --query "HostedZones[*].[Id,Config.PrivateZone,Name]" \
+     --output text | grep "True" | grep "${hosted_zone_filter}" | awk '{printf $1}')
+
+PRIVATE_HOSTED_ZONE_NAME=$(aws route53 list-hosted-zones \
+            --query "HostedZones[*].[Name,Config.PrivateZone,Name]" \
+     --output text | grep "True" | grep "${hosted_zone_filter}" | awk '{printf $1}')
+
+PUBLIC_HOSTED_ZONE_ID=$(aws route53 list-hosted-zones \
             --query "HostedZones[*].[Id,Config.PrivateZone,Name]" \
      --output text | grep "False" | grep "${hosted_zone_filter}" | awk '{printf $1}')
 
-HOSTED_ZONE_NAME=$(aws route53 list-hosted-zones \
+PUBLIC_HOSTED_ZONE_NAME=$(aws route53 list-hosted-zones \
             --query "HostedZones[*].[Name,Config.PrivateZone,Name]" \
      --output text | grep "False" | grep "${hosted_zone_filter}" | awk '{printf $1}')
 
@@ -215,15 +223,15 @@ params=$(echo "${target_access}" | \
           "AccountId" : "'${TargetAccountId}'",
 	  "LoadBalancerScheme": "'${load_balancer_scheme}'",
           "Priority" : "'${priority}'",
-          "PrivateHostedZoneName" : "'${HOSTED_ZONE_NAME%.*}'",
-          "PrivateHostedZoneId" : "'${HOSTED_ZONE_ID##*/}'",
-          "PublicHostedZoneName" : "'${HOSTED_ZONE_NAME%.*}'",
-          "PublicHostedZoneId" : "'${HOSTED_ZONE_ID##*/}'",
+          "PrivateHostedZoneName" : "'${PRIVATE_HOSTED_ZONE_NAME%.*}'",
+          "PrivateHostedZoneId" : "'${PRIVATE_HOSTED_ZONE_ID##*/}'",
+          "PublicHostedZoneName" : "'${PUBLIC_HOSTED_ZONE_NAME%.*}'",
+          "PublicHostedZoneId" : "'${PUBLIC_HOSTED_ZONE_ID##*/}'",
           "EnvironmentNameUpper" : "'${EnvironmentNameUpper}'",
           "EnvironmentNameLower" : "'${EnvironmentNameUpper,,}'",
           "DeploymentS3BucketName" : "'${TargetAccountId}-${EnvironmentNameUpper,,}-deployment'",
           "RuntimeImage" : "'${ServiceName}-runtime-image:${BUILD_ID}'",
-          "HostedZoneName" : "'${HOSTED_ZONE_NAME}'",
+          "HostedZoneName" : "'${PUBLIC_HOSTED_ZONE_NAME}'",
           "ProjectName" : "'${ProjectName}'",
           "ServiceName" : "'${ServiceName}'"
            }')
