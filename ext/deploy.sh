@@ -258,15 +258,15 @@ with open(out_file) as out:
   
 
 with open(config_file) as config: 
-  params = json.load(config)
+  config = json.load(config)
 
 print("Checking for config")
-if "deployer" in params and "paramsSubstitutions" in params["deployer"]:
-  print("Found deployment config")
-  with open(out_file, "w") as out:
-    if "paramsSubstitutions" in params["deployer"]:
+with open(out_file, "w") as out:
+  if "deployer" in config and "paramsSubstitutions" in config["deployer"]:
+    print("Found deployment config")
+    if "paramsSubstitutions" in config["deployer"]:
       print("Found substitutions")
-      substitutions = params["deployer"]["paramsSubstitutions"]
+      substitutions = config["deployer"]["paramsSubstitutions"]
       new_data = {}
       for key, value in data.items():
         if key in substitutions:
@@ -276,7 +276,28 @@ if "deployer" in params and "paramsSubstitutions" in params["deployer"]:
         else:
           new_data[key] = value  
       group_vars["params"] = new_data
-      json.dump(group_vars, out)
+
+  if "deployer" in config and "oidc" in config["deployer"]:
+    print("Found OIDC config")
+    oidc = config["deployer"]["oidc"]
+    attribute_mapping = oidc.get("attributeMapping", {})
+    provider_details = oidc.get("providerDetails", {})
+    params = group_vars["params"]
+
+    params["OidcProviderName"] = oidc.get("providerName")
+
+    params["OidcAttributeMappingEmail"] = attribute_mapping.get("email")
+    params["OidcAttributeMappingName"] = attribute_mapping.get("name")
+    params["OidcAttributeMappingProfile"] = attribute_mapping.get("profile")
+    params["OidcAttributeMappingUsername"] = attribute_mapping.get("username")
+
+    params["OidcProviderDetailsClientId"] = provider_details.get("clientId")
+    params["OidcProviderDetailsClientSecret"] = provider_details.get("clientSecret")
+    params["OidcProviderDetailsAuthorizedScopes"] = provider_details.get("authorizedScopes", "openid email profile")
+    params["OidcProviderDetailsOidcIssuer"] = provider_details.get("oidcIssuer")
+    params["OidcProviderDetailsAttributeRequestMethod"] = provider_details.get("attributeRequestMethod", "GET")
+
+  json.dump(group_vars, out)
 EOF
 
 python3 ${correction_script} /tmp/config.json $work_dir/group_vars/all.json 
