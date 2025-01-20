@@ -110,7 +110,7 @@ aws route53 list-hosted-zones \
         --query 'HostedZones[*].[Name,Config.PrivateZone,Name]' \
         --output text
 
-hosted_zone_filter="alpha-prosoft*"
+hosted_zone_filter="alpha-*"
 echo "Hosted zone filter: ${hosted_zone_filter}"
 if [[ ! -z "$(cat /tmp/config.json | jq -r '.deployer.hostedZoneFilter // empty')" ]]; then 
    hosted_zone_filter="$(cat /tmp/config.json | jq -r '.deployer.hostedZoneFilter')"
