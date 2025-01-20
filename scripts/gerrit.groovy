@@ -123,6 +123,7 @@ def init() {
   sh 'mkdir -p lib'
   sh 'mkdir -p ext'
   sh 'mkdir -p www'
+  sh 'mkdir -p cert'
 }
 
 return this
