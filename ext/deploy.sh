@@ -234,7 +234,7 @@ params=$(echo "${target_access}" | \
           "DeploymentS3BucketName" : "'${TargetAccountId}-${EnvironmentNameUpper,,}-deployment'",
           "RuntimeImage" : "'${ServiceName}-runtime-image:${BUILD_ID}'",
           "HostedZoneName" : "'${PUBLIC_HOSTED_ZONE_NAME}'",
-          "ProjectName" : "'${ProjectName}'",
+          "ProjectName" : "'${ProjectName:-alpha}'",
           "ServiceName" : "'${ServiceName}'"
            }')
 
