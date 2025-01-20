@@ -64,12 +64,11 @@ export AWS_ACCESS_KEY_ID=$(echo $SESSION | jq -r '.Credentials.AccessKeyId')
 export AWS_SECRET_ACCESS_KEY=$(echo $SESSION | jq -r '.Credentials.SecretAccessKey')
 export AWS_SESSION_TOKEN=$(echo $SESSION | jq -r '.Credentials.SessionToken')
 
-echo "{}" > /tmp/config.json
 aws ssm get-parameter \
        --name "/install/config" \
        --with-decryption \
        --query 'Parameter.Value' \
-       --output text > /tmp/config.json || echo "No config"
+       --output text > /tmp/config.json || echo "{}" > /tmp/config.json
 
 echo "#### Deployment config: "
 cat /tmp/config.json
