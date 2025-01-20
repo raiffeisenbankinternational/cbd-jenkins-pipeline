@@ -16,7 +16,7 @@ def doCheckout() {
         trackingSubmodules: false
       ]],
    submoduleCfg: [],
-   userRemoteConfigs: [[credentialsId: 'jenkins',
+   userRemoteConfigs: [[credentialsId: 'gerrit-ssh',
      refspec: '$GERRIT_REFSPEC',
      url: "${GIT_URL}"]]]
   )
