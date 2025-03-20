@@ -44,7 +44,9 @@ export BUILD_ID=$((BUILD_ID+1))
 echo "New build id: $BUILD_ID"
 
 mkdir -p cert
-cp /etc/pki/ca-trust/source/anchors/* cert/
+if [[ -f /etc/pki/ca-trust/source/anchors/ ]]; then 
+  cp /etc/pki/ca-trust/source/anchors/* cert/
+fi 
 
 arg_http_proxy="--build-arg http_proxy=${http_proxy:-}"
 arg_https_proxy="--build-arg https_proxy=${https_proxy:-}"
