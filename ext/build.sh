@@ -63,7 +63,7 @@ docker build --progress=plain \
 	     --build-arg BuildId="${BUILD_ID}" \
 	     --build-arg AWS_REGION="${AWS_DEFAULT_REGION}" \
       	     --build-arg AWS_DEFAULT_REGION="${AWS_DEFAULT_REGION}" \
-	     --build-arg DOCKER_REGISTRY_URL="${DOCKER_REGISTRY_URL}" \
+	     --build-arg DOCKER_REGISTRY_URL="${DOCKER_REGISTRY_URL:-docker.io}" \
              --build-arg PROJECT_NAME="${PROJECT_NAME}" \
              ${arg_http_proxy} \
 	     ${arg_https_proxy} \
